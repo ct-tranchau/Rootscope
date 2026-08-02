@@ -1,6 +1,4 @@
-# Rootscope
-
-**Predict cell types in confocal root-tip cross-section images — straight from a TIFF.**
+# RootScope: Cross-species Root Cell-Type Classification from Confocal Microscopy Images
 
 Rootscope takes a raw microscopy TIFF, **segments every cell with Cellpose-SAM**,
 extracts shape / size / intensity / tissue-layer features together with
@@ -8,9 +6,6 @@ fine-tuned **DINOv2** embeddings, and predicts each cell's type using an
 iterative **RandomForest + XGBoost + LightGBM** ensemble. You get a per-cell
 CSV and a labeled overlay image.
 
-You don't need to pre-segment your images — one command in, predictions out.
-
----
 
 ## Install
 
@@ -36,10 +31,6 @@ pip install .                           # 2. the package
 pip install -r requirements.txt         # 1. dependencies
 pip install .                           # 2. the package
 ```
-
-Both dependency files are **version-pinned** to the exact set this release was
-validated against, so your predictions reproduce ours. In particular
-scikit-learn is pinned to 1.7.2 — the released models were pickled with it.
 
 > **No GPU?** In `environment.yml`, change `pytorch-cuda=12.1` to `cpuonly`.
 > Prediction still works, but expect ~15–30 min per image instead of ~2 min.
@@ -149,12 +140,6 @@ You do not need to download these by hand. To use your own instead, pass
 `--model-dir` / `--cnn-weights`, or set `ROOTSCOPE_MODEL_DIR` /
 `ROOTSCOPE_CNN_WEIGHTS`. To host them elsewhere, set `ROOTSCOPE_HF_REPO` (another
 Hub repo) or `ROOTSCOPE_MODELS_URL` (any base URL).
-
----
-
-## License
-
-MIT — see [LICENSE](LICENSE).
 
 ## Contact
 
