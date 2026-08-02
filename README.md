@@ -143,4 +143,4 @@ Hub repo) or `ROOTSCOPE_MODELS_URL` (any base URL).
 
 ## Contact
 
-ct-tranchau — tnchau@vt.edu
+ct-tranchau - tnchau@vt.edu
