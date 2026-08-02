@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rootscope"
+version = "0.1.0"
+description = "Cell-type prediction for confocal root-tip cross-section images (segment + predict from a TIFF)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "ct-tranchau", email = "tnchau@vt.edu" }]
+keywords = ["cell-type", "confocal", "root-tip", "cellpose", "dinov2", "segmentation", "microscopy"]
+
+# Core Python dependencies.
+#
+# These are deliberately LOOSE floors, not pins: the intended install is
+#   1. conda env create -f environment.yml   (or pip install -r requirements.txt)
+#   2. pip install rootscope
+# where step 1 pins the exact validated versions. Floors here let pip accept
+# those pinned versions rather than re-resolving and upgrading them.
+#
+# scikit-learn is the one hard pin: the released .joblib models were pickled
+# with 1.7.2, and other versions can fail to unpickle or change results.
+#
+# PyTorch is best installed via conda for correct CUDA support — see
+# environment.yml. pip will still pull CPU/GPU wheels from PyPI if you install
+# this way.
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scipy>=1.10",
+    "scikit-image>=0.22",
+    "scikit-learn==1.7.2",
+    "opencv-python-headless>=4.8",
+    "Pillow>=10.0",
+    "tifffile>=2024.1.30",
+    "imagecodecs>=2024.1.1",
+    "matplotlib>=3.7",
+    "seaborn>=0.13",
+    "tqdm>=4.66",
+    "joblib>=1.3",
+    "xgboost>=2.0",
+    "lightgbm>=4.0",
+    "cellpose>=4.0",
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "huggingface_hub>=0.24",
+]
+
+[project.urls]
+Homepage = "https://github.com/ct-tranchau/Rootscope"
+Source = "https://github.com/ct-tranchau/Rootscope"
+"Model weights" = "https://huggingface.co/ct-tranchau/Rootscope"
+
+[project.scripts]
+rootscope = "rootscope.cli:main"
+
+[tool.setuptools]
+packages = ["rootscope"]
+
+[tool.setuptools.package-data]
+rootscope = ["py.typed"]

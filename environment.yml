@@ -1,0 +1,51 @@
+# Conda environment for Rootscope.
+#
+#   conda env create -f environment.yml
+#   conda activate rootscope
+#   pip install rootscope          # or, from a clone: pip install .
+#
+# This file installs the DEPENDENCIES only. Rootscope itself is installed
+# separately with pip (the line above), so you can upgrade the package without
+# rebuilding the environment.
+#
+# Versions are pinned to the set this release was built and validated against.
+# scikit-learn MUST stay at 1.7.2 — the released .joblib models were pickled
+# with it, and other versions can fail to unpickle or silently change results.
+#
+# GPU: this pulls the CUDA 12.1 build of PyTorch.
+# CPU-only machine? Replace `pytorch-cuda=12.1` with `cpuonly` below.
+# (Prediction works on CPU, but expect ~15-30 min per image instead of ~2 min.)
+name: rootscope
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  # ── core scientific stack ──
+  - numpy=2.2.6
+  - pandas=2.3.3
+  - scipy=1.15.2
+  - scikit-image=0.25.2
+  - scikit-learn=1.7.2
+  - tifffile=2025.2.18
+  - imagecodecs=2025.3.30
+  - pillow=12.3.0
+  - opencv=5.0.0
+  # ── plotting ──
+  - matplotlib=3.10.9
+  - seaborn=0.13.2
+  # ── classifiers ──
+  - xgboost=3.2.0
+  - lightgbm=4.7.0
+  - joblib=1.5.3
+  # ── deep learning ──
+  - pytorch=2.4.0
+  - torchvision=0.19.0
+  - pytorch-cuda=12.1   # <-- change to `cpuonly` if you have no GPU
+  # ── misc ──
+  - tqdm=4.70.0
+  - pip:
+      - cellpose==4.2.1.1
+      - huggingface_hub>=0.24

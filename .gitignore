@@ -1,0 +1,23 @@
+# Model weights (large — distributed separately, auto-downloaded on first run)
+models/*.joblib
+models/*.pt
+models/*.pth
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+.venv/
+venv/
+
+# Outputs
+results/
+predictions/
+*.log
+
+# OS / editor
+.DS_Store
+.ipynb_checkpoints/

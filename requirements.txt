@@ -1,0 +1,47 @@
+# Rootscope dependencies.
+#
+#   pip install -r requirements.txt
+#   pip install rootscope          # or: pip install .
+#
+# Versions are pinned to the set this release was built and validated against,
+# so predictions reproduce exactly. scikit-learn in particular MUST stay at
+# 1.7.2 — the released .joblib models were pickled with it, and other versions
+# can fail to unpickle or silently change behaviour.
+#
+# GPU note: the torch wheels below are the default PyPI builds (CUDA 12.1 on
+# Linux). For a specific CUDA version, or for a CPU-only install, see
+# https://pytorch.org/get-started/locally/ — or use environment.yml with conda.
+
+# ── core scientific stack ────────────────────────────────────────────────────
+numpy==2.2.6
+pandas==2.3.3
+scipy==1.15.2
+scikit-image==0.25.2
+scikit-learn==1.7.2
+tifffile==2025.2.18
+imagecodecs==2025.3.30
+Pillow==12.3.0
+opencv-python-headless==5.0.0
+
+# ── plotting (overlay images, figures) ───────────────────────────────────────
+matplotlib==3.10.9
+seaborn==0.13.2
+
+# ── classifiers ──────────────────────────────────────────────────────────────
+xgboost==3.2.0
+lightgbm==4.7.0
+joblib==1.5.3
+
+# ── deep learning: DINOv2 embeddings + Cellpose-SAM segmentation ─────────────
+torch==2.4.0
+torchvision==0.19.0
+cellpose==4.2.1.1
+fastremap==1.20.0
+natsort==8.4.0
+segment-anything==1.0
+
+# ── weight download (resumable, cached in ~/.cache/huggingface) ──────────────
+huggingface_hub>=0.24
+
+# ── misc ─────────────────────────────────────────────────────────────────────
+tqdm==4.70.0
