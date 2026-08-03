@@ -17,7 +17,7 @@ git clone https://github.com/ct-tranchau/Rootscope.git
 cd Rootscope
 ```
 
-### Option A — conda (recommended, handles GPU PyTorch)
+### Option A - conda (recommended, handles GPU PyTorch)
 
 ```bash
 conda env create -f environment.yml     # 1. dependencies
@@ -25,7 +25,7 @@ conda activate rootscope
 pip install .                           # 2. the package
 ```
 
-### Option B — pip only
+### Option B - pip only
 
 ```bash
 pip install -r requirements.txt         # 1. dependencies
@@ -148,4 +148,4 @@ Hub repo) or `ROOTSCOPE_MODELS_URL` (any base URL).
 
 ## Contact
 
-ct-tranchau - tnchau@vt.edu
+TRAN CHAU - tnchau@vt.edu
