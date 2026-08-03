@@ -44,26 +44,12 @@ so you need an internet connection the first time you run Rootscope.
 ---
 
 ## Predict
-
-### Try it on the included examples
-
-Two raw root-tip TIFFs ship with the repo, so you can check the install works
-before using your own data:
-
-```bash
-rootscope --tif examples/Acorulea_RootTip_Maturation.tif \
-          --um-per-px 0.6478 --out results/
-```
-
-See [`examples/README.md`](examples/README.md) for both images, their pixel
-scales, and the cell counts a correct run should produce.
-
 ### One image
 
 ```bash
 rootscope --tif my_image.tif --out results/
 ```
-
+See [`examples/README.md`](examples/README.md)
 ### A folder of images
 
 ```bash
