@@ -6,7 +6,6 @@ Two raw confocal root-tip cross-sections for trying RootScope out: `Acorulea_Roo
 
 ```bash
 rootscope --tif examples/Acorulea_RootTip_Maturation.tif \
-          --um-per-px 0.6478 \
           --out results/
 ```
 
