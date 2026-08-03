@@ -45,6 +45,19 @@ so you need an internet connection the first time you run Rootscope.
 
 ## Predict
 
+### Try it on the included examples
+
+Two raw root-tip TIFFs ship with the repo, so you can check the install works
+before using your own data:
+
+```bash
+rootscope --tif examples/Acorulea_RootTip_Maturation.tif \
+          --um-per-px 0.6478 --out results/
+```
+
+See [`examples/README.md`](examples/README.md) for both images, their pixel
+scales, and the cell counts a correct run should produce.
+
 ### One image
 
 ```bash
@@ -63,9 +76,15 @@ rootscope --tif-dir my_tifs/ --out results/
 |------|---------|
 | `--cpu` / `--gpu` | force CPU or GPU (default: auto-detect) |
 | `--um-per-px 0.5` | microns per pixel of your image (default 1.0) |
+| `--label-cells` | write the cell-type name inside each cell on the overlay (default: off) |
 | `--model-dir DIR` | use your own trained weights instead of the download |
 | `--cnn-weights backbone.pt` | use your own fine-tuned DINOv2 backbone |
 | `--max-rounds N` | iterative-refinement rounds (default 10) |
+
+By default the overlay shows colored cells plus a legend. `--label-cells` also
+prints an abbreviated type name inside every cell — handy when zooming into one
+region, but on a dense cross-section the text overlaps and hides the image,
+which is why it is off by default.
 
 ### From Python
 
