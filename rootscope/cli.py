@@ -44,6 +44,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Microns per pixel (default: 1.0).")
     p.add_argument("--max-rounds", type=int, default=10,
                    help="Max iterative refinement rounds (default: 10).")
+    p.add_argument("--label-cells", action="store_true",
+                   help="Write the cell-type name inside each cell on the "
+                        "overlay. Off by default (the text overlaps on dense "
+                        "sections); the color legend already shows the types.")
 
     g = p.add_mutually_exclusive_group()
     g.add_argument("--gpu", dest="gpu", action="store_true", default=None,
@@ -76,6 +80,7 @@ def main(argv=None):
                 args.tif, out_dir=args.out_dir, gpu=use_gpu,
                 model_dir=args.model_dir, cnn_weights=args.cnn_weights,
                 um_per_px=args.um_per_px, max_rounds=args.max_rounds,
+                label_cells=args.label_cells,
             )
             n = 0 if df is None else len(df)
             print(f"\n[rootscope] Done — {n} cell predictions written to {args.out_dir}/")
@@ -84,7 +89,7 @@ def main(argv=None):
                 args.tif_dir, out_dir=args.out_dir, gpu=use_gpu,
                 model_dir=args.model_dir, cnn_weights=args.cnn_weights,
                 um_per_px=args.um_per_px, max_rounds=args.max_rounds,
-                pattern=args.pattern,
+                label_cells=args.label_cells, pattern=args.pattern,
             )
             n = 0 if df is None else len(df)
             print(f"\n[rootscope] Done — {n} total predictions written to {args.out_dir}/")

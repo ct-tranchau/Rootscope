@@ -35,6 +35,7 @@ def predict_tif(
     cnn_weights=None,
     um_per_px=1.0,
     max_rounds=10,
+    label_cells=False,
 ):
     """Segment + predict cell types for a single TIFF. Returns a DataFrame."""
     models_dict, scalers, feature_cols, le, cnn = _load(model_dir, cnn_weights)
@@ -42,6 +43,7 @@ def predict_tif(
         str(tif), models_dict, scalers, feature_cols, le,
         um_per_px=um_per_px, gpu=gpu, out_dir=str(out_dir),
         max_rounds=max_rounds, cnn_weights=str(cnn) if cnn else None,
+        label_cells=label_cells,
     )
     return df
 
@@ -54,6 +56,7 @@ def predict_folder(
     cnn_weights=None,
     um_per_px=1.0,
     max_rounds=10,
+    label_cells=False,
     pattern="*.tif",
 ):
     """Segment + predict for every TIFF in a folder. Returns a combined
@@ -70,6 +73,7 @@ def predict_folder(
                 str(tp), models_dict, scalers, feature_cols, le,
                 um_per_px=um_per_px, gpu=gpu, out_dir=str(out_dir),
                 max_rounds=max_rounds, cnn_weights=str(cnn) if cnn else None,
+                label_cells=label_cells,
             )
             if df is not None:
                 tables.append(df)

@@ -132,9 +132,13 @@ def load_models(model_dir):
 
 
 def save_prediction_overlay(img_rgb, masks, cell_predictions, out_path,
-                             le, alpha=0.5):
+                             le, alpha=0.5, label_cells=False):
     """
-    Overlay predicted cell-type colors on TIF with labels + legend.
+    Overlay predicted cell-type colors on TIF, with a legend.
+
+    label_cells=True also prints an abbreviated cell-type name inside every
+    cell. Off by default: on a dense cross-section the per-cell text overlaps
+    and hides the image. The color + legend already carry the same information.
     """
     H, W = masks.shape
     gray = to_grayscale_float(img_rgb)
@@ -158,22 +162,23 @@ def save_prediction_overlay(img_rgb, masks, cell_predictions, out_path,
     im = Image.fromarray(np.clip(blended, 0, 255).astype(np.uint8))
     draw = ImageDraw.Draw(im)
 
-    # Draw cell type name on each cell
-    props = {p.label: p for p in regionprops(masks)}
-    med_area = float(np.median([p.area for p in props.values()])) if props else 100.0
-    base_fs = max(7, min(14, int(np.sqrt(med_area) * 0.25)))
-    font = _load_font(base_fs)
+    # Optional: draw the cell-type name inside each cell (--label-cells)
+    if label_cells:
+        props = {p.label: p for p in regionprops(masks)}
+        med_area = float(np.median([p.area for p in props.values()])) if props else 100.0
+        base_fs = max(7, min(14, int(np.sqrt(med_area) * 0.25)))
+        font = _load_font(base_fs)
 
-    for cid, pred_name in cell_predictions.items():
-        if cid not in props:
-            continue
-        cy, cx = props[cid].centroid
-        x, y = int(round(cx)), int(round(cy))
-        # Abbreviate: first 3 chars
-        abbr = pred_name[:4]
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            draw.text((x + dx, y + dy), abbr, fill=(0, 0, 0), font=font, anchor="mm")
-        draw.text((x, y), abbr, fill=(255, 255, 255), font=font, anchor="mm")
+        for cid, pred_name in cell_predictions.items():
+            if cid not in props:
+                continue
+            cy, cx = props[cid].centroid
+            x, y = int(round(cx)), int(round(cy))
+            # Abbreviate: first 4 chars
+            abbr = pred_name[:4]
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                draw.text((x + dx, y + dy), abbr, fill=(0, 0, 0), font=font, anchor="mm")
+            draw.text((x, y), abbr, fill=(255, 255, 255), font=font, anchor="mm")
 
     # Legend
     legend_font = _load_font(13)
@@ -562,7 +567,7 @@ def iterative_predict(model, df_base, adjacency, feature_cols, scaler, le,
 
 def predict_single_tif(tif_path, models_dict, scalers, feature_cols, le,
                         um_per_px=1.0, gpu=True, out_dir="predictions",
-                        max_rounds=10, cnn_weights=None):
+                        max_rounds=10, cnn_weights=None, label_cells=False):
     """
     Full pipeline: segment -> features -> iterative predict -> overlay.
     """
@@ -693,7 +698,7 @@ def predict_single_tif(tif_path, models_dict, scalers, feature_cols, le,
         # Save per-model overlay PNG
         overlay_path = out_dir / f"{stem}_{model_name}_overlay.png"
         save_prediction_overlay(img_rgb, masks, cell_predictions,
-                                overlay_path, le)
+                                overlay_path, le, label_cells=label_cells)
         print(f"    Saved: {overlay_path}")
 
         all_dfs.append(df)
@@ -784,7 +789,7 @@ def predict_single_tif(tif_path, models_dict, scalers, feature_cols, le,
 
         ens_overlay_path = out_dir / f"{stem}_Ensemble_overlay.png"
         save_prediction_overlay(img_rgb, masks, ens_cell_predictions,
-                                ens_overlay_path, le)
+                                ens_overlay_path, le, label_cells=label_cells)
         print(f"    Saved: {ens_overlay_path}")
 
         all_dfs.append(df_ens)
@@ -848,6 +853,7 @@ def main():
                 um_per_px=args.um_per_px, gpu=args.gpu, out_dir=args.out_dir,
                 max_rounds=args.max_rounds,
                 cnn_weights=args.cnn_weights,
+                label_cells=getattr(args, "label_cells", False),
             )
             if df is not None:
                 all_tables.append(df)
