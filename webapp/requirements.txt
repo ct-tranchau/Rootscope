@@ -1,0 +1,31 @@
+# Dependencies for the RootScope Hugging Face Space.
+#
+# Copy this file (plus app.py, README.md, and the two example TIFFs) into the
+# Space repo — see webapp/README.md for the deploy steps.
+#
+# torch is NOT pinned here, deliberately. ZeroGPU only supports torch 2.8.0
+# and newer (2.8.0 / 2.9.1 / 2.10.0 / 2.11.0), whereas RootScope's own
+# requirements.txt pins torch==2.4.0 for local reproducibility. Installing
+# RootScope from git uses pyproject.toml instead, whose floor is torch>=2.0,
+# so pip is free to resolve the version ZeroGPU provides.
+#
+# CONSEQUENCE: the Space runs a torch/cellpose combination that has NOT been
+# validated against the published models. Test the example images on the Space
+# and compare against a local run before announcing it. In particular torch
+# 2.6+ flipped `torch.load(weights_only=...)` to True by default, which affects
+# how backbone.pt and the Cellpose-SAM checkpoint load.
+
+gradio>=5.0
+spaces>=0.30
+
+# RootScope itself, straight from GitHub. Pin to a tag or commit before you
+# announce the Space, so a push to main cannot change what users get.
+rootscope @ git+https://github.com/ct-tranchau/Rootscope.git@main
+
+# scikit-learn is a hard pin inherited from the package: the released .joblib
+# models were pickled with 1.7.2 and other versions can fail to unpickle.
+scikit-learn==1.7.2
+
+# Everything else (numpy, pandas, scipy, scikit-image, cellpose, xgboost,
+# lightgbm, tifffile, imagecodecs, huggingface_hub, ...) comes in as a
+# dependency of rootscope.
