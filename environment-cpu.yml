@@ -1,6 +1,6 @@
 # Conda environment for Rootscope.
 #
-#   conda env create -f environment.yml
+#   conda env create -f environment-cpu.yml
 #   conda activate rootscope
 #   pip install rootscope          # or, from a clone: pip install .
 #
@@ -12,12 +12,15 @@
 # scikit-learn MUST stay at 1.7.2. The released .joblib models were pickled
 # with it, and other versions can fail to unpickle or silently change results.
 #
-# This file pulls the CUDA 12.1 build of PyTorch, so it is for Linux or
-# Windows with an NVIDIA GPU.
+# This is the CPU build. Use it on macOS, or on any machine without an NVIDIA
+# GPU. The NVIDIA metapackage that environment.yml needs does not exist for
+# macOS at all, so that file cannot be solved there; this one can.
 #
-# On macOS, or on any machine without an NVIDIA GPU, use environment-cpu.yml
-# instead. Do not try to adapt this file by hand: the NVIDIA metapackage below
-# does not exist for macOS, so conda cannot solve this file on a Mac.
+# Prediction works on CPU, but expect ~15-30 min per image instead of ~2 min.
+# For more than a couple of images, use the web app or the Colab notebook.
+#
+# Apple Silicon only. PyTorch has dropped macOS Intel builds, so Intel Macs
+# cannot run Rootscope locally at all; use the web app or Colab.
 name: rootscope
 channels:
   - pytorch
@@ -46,7 +49,7 @@ dependencies:
   # ── deep learning ──
   - pytorch=2.4.0
   - torchvision=0.19.0
-  - pytorch-cuda=12.1   # Linux/Windows + NVIDIA only; else environment-cpu.yml
+  - cpuonly
   # ── misc ──
   - tqdm=4.70.0
   - pip:

@@ -1,3 +1,14 @@
+# Exact dependency versions this release was built and validated against.
+#
+# REQUIRES PYTHON 3.10, 3.11 OR 3.12. These pins predate 3.13, so on a newer
+# Python there is no prebuilt numpy, scipy or PyTorch to match them and pip
+# falls back to compiling them from source, which needs a Fortran compiler and
+# OpenBLAS and normally fails.
+#
+# On Python 3.13 or newer, skip this file and run `pip install .` on its own.
+# The floors in pyproject.toml let pip pick versions that have prebuilt
+# packages for your Python. See the Install section of README.md.
+#
 # Rootscope dependencies.
 #
 #   pip install -r requirements.txt

@@ -4,31 +4,80 @@ RootScope uses Cellpose-SAM to segment every cell and describes each one with mo
 
 ## Install
 
-Get the code, install the dependencies from a file, then install Rootscope with
-pip.
+Needs **Python 3.10 or newer**. Check with `python -V` before you start; conda's
+`base` environment is often much newer than that and is not a good place to
+install into.
 
 ```bash
 git clone https://github.com/ct-tranchau/Rootscope.git
 cd Rootscope
 ```
 
-### Option A - conda (recommended, handles GPU PyTorch)
+Then pick one of the three:
+
+### Option A - conda (recommended, brings its own Python 3.10)
+
+Linux or Windows with an NVIDIA GPU:
 
 ```bash
-conda env create -f environment.yml     # 1. dependencies
+conda env create -f environment.yml
 conda activate rootscope
-pip install .                           # 2. the package
+pip install .
 ```
 
-### Option B - pip only
+macOS, or any machine without an NVIDIA GPU:
 
 ```bash
-pip install -r requirements.txt         # 1. dependencies
-pip install .                           # 2. the package
+conda env create -f environment-cpu.yml
+conda activate rootscope
+pip install .
 ```
 
-> **No GPU?** In `environment.yml`, change `pytorch-cuda=12.1` to `cpuonly`.
-> Prediction still works, but expect ~15-30 min per image instead of ~2 min.
+The two files differ by one line. `environment.yml` requires an NVIDIA
+metapackage that does not exist for macOS, so on a Mac it cannot be solved at
+all; that is what `environment-cpu.yml` is for.
+
+### Option B - pip, whatever Python you already have
+
+```bash
+pip install .
+```
+
+pip picks dependency versions that have prebuilt packages for your Python, so
+this works on 3.13 and 3.14 as well. It does not reproduce the exact validated
+version set, so results can differ slightly from the published ones.
+
+### Option C - pip, exact validated versions
+
+```bash
+pip install -r requirements.txt     # needs Python 3.10, 3.11 or 3.12
+pip install .
+```
+
+`requirements.txt` pins the precise set this release was tested with. Those
+pins predate Python 3.13, so on 3.13 or newer pip finds nothing prebuilt to
+match and tries to compile numpy, scipy and PyTorch from source. That needs a
+Fortran compiler and OpenBLAS, and usually ends in:
+
+```
+ERROR: Dependency lookup for OpenBLAS with method 'pkg-config' failed
+```
+
+If you see that, you are on a Python that is too new for these pins. Use Option
+A or B instead.
+
+### Platform notes
+
+| Machine | Works | Notes |
+|---|---|---|
+| Linux + NVIDIA GPU | yes | `environment.yml`, ~2 min per image |
+| Linux, CPU only | yes | `environment-cpu.yml`, 15-30 min per image |
+| Windows + NVIDIA GPU | yes | `environment.yml` |
+| macOS, Apple Silicon | yes | `environment-cpu.yml`, 15-30 min per image |
+| macOS, Intel | **no** | PyTorch no longer ships macOS Intel builds |
+
+No GPU, or not wanting to install anything at all? Both routes below run the
+same pipeline with nothing to set up. See "Run it in the browser" below.
 
 The first prediction downloads the trained model weights (~460 MB) once from
 [huggingface.co/ct-tranchau/Rootscope](https://huggingface.co/ct-tranchau/Rootscope)

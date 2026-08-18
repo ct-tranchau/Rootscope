@@ -7,7 +7,7 @@ name = "rootscope"
 version = "0.1.0"
 description = "Cell-type prediction for confocal root-tip cross-section images (segment + predict from a TIFF)."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"   # scikit-learn 1.7.2 is pinned and ships no 3.9 wheel
 license = { file = "LICENSE" }
 authors = [{ name = "ct-tranchau", email = "tnchau@vt.edu" }]
 keywords = ["cell-type", "confocal", "root-tip", "cellpose", "dinov2", "segmentation", "microscopy"]
