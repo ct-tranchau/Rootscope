@@ -112,6 +112,36 @@ predictions stop changing.
 
 ---
 
+## Run it in the browser
+
+### Google Colab (free GPU, nothing to install)
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ct-tranchau/Rootscope/blob/main/notebooks/Rootscope_Colab.ipynb)
+
+[`notebooks/Rootscope_Colab.ipynb`](notebooks/Rootscope_Colab.ipynb) runs the
+whole pipeline on Colab's free T4: upload a TIFF, get the overlay and per-cell
+CSV, or batch a folder from Google Drive. It reads the pixel size from OME
+metadata so you do not have to remember it.
+
+### Web app
+
+`webapp/` holds a Gradio front end — upload a TIFF in the browser, get the
+overlay and per-cell CSV back — designed to run on a Hugging Face Space with
+ZeroGPU, in the style of the
+[Cellpose-SAM Space](https://huggingface.co/spaces/mouseland/cellpose).
+
+```bash
+conda activate rootscope
+pip install gradio
+python webapp/app.py
+```
+
+Only segmentation and the DINOv2 embeddings run on the GPU; feature
+extraction, the iterative ensemble, and overlay drawing run on the CPU. See
+[`webapp/README.md`](webapp/README.md) for the deploy steps.
+
+---
+
 ## Retraining / full pipeline
 
 The `pipeline/` folder contains the complete, numbered research workflow used to
