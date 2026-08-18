@@ -128,31 +128,64 @@ print("[rootscope-web] GPU models load on first use (no CUDA touched at import)"
 
 
 # ── the two GPU stages ───────────────────────────────────────────────────────
-# Duration is tiered by image size, as the Cellpose-SAM Space does, so a small
-# image does not reserve a long slot against the user's daily GPU quota.
-
-# ZeroGPU bills the wall-clock of each @spaces.GPU call against the visitor's
-# daily quota, and a call that overruns its reservation is killed. Rather than
-# bucket into fixed tiers, ask for a duration computed from the actual input;
-# ZeroGPU accepts a callable taking the same arguments as the function.
+# Each @spaces.GPU call asks ZeroGPU for a duration up front. Two rules bite:
+# a call that overruns its reservation is killed, and a request larger than the
+# visitor's REMAINING daily quota is refused outright with "requested GPU
+# duration N is larger than the maximum allowed".
 #
-# Calibrated from CPU measurements (segmentation 95 s at 700x700 / 148 s at
-# 910x910; embeddings 43 s for 215 cells / 80 s for 448 cells) then floored
-# generously, since a GPU should be far quicker but an overrun is fatal while
-# over-reserving only costs queue priority.
+# That second rule is why the numbers below matter. A signed-out visitor has
+# only 120 s of quota per day, so anything asking for more than that fails
+# before the function runs, however small the image. The earlier version asked
+# for a 150 s floor, calibrated off CPU timings taken when no GPU was available
+# to measure, which made the Space unusable for everyone not signed in.
+#
+# Re-calibrated from the live Space, reading stage boundaries out of the log:
+#
+#   700x700, 214 cells   segmentation 27.7 s cold, 20 s warm   embeddings ~2 s
+#
+# The segmentation figure includes building Cellpose-SAM inside the call, which
+# the fork running each task pays every single time, and it is most of the cost.
+# Embeddings are genuinely cheap on a GPU; their formula is left generous
+# because a big section has many more cells to batch.
+#
+# The formulas sit ~2x above the measured cold-start cost, and cap under 120 s
+# so a signed-out visitor can always get a slot. Do not tighten these to hug
+# the measurements: overrunning a reservation kills the job outright, while
+# over-reserving only spends quota the visitor was not going to use anyway,
+# since ZeroGPU bills actual wall clock rather than the amount requested.
+MAX_DURATION = 100      # keep under the 120 s signed-out quota
 
-# The floor is 120 s, not 60: the first call on a fresh ZeroGPU allocation pays
-# CUDA context init and the transfer of the 1.15 GB Cellpose-SAM checkpoint
-# before any real work starts. Overrunning kills the job; over-reserving only
-# costs queue priority.
 def _segment_duration(img_rgb):
-    px = max(img_rgb.shape[:2])
-    return int(min(300, max(150, px / 1000 * 90)))
+    mp = (img_rgb.shape[0] * img_rgb.shape[1]) / 1e6
+    return int(min(MAX_DURATION, max(45, 30 + 60 * mp)))
 
 
 def _embed_duration(masks, img_rgb, df_base):
     n = int(masks.max())
-    return int(min(300, max(150, n / 400 * 90)))
+    return int(min(MAX_DURATION, max(25, 10 + 0.06 * n)))
+
+
+def _gpu_call(fn, *args):
+    """Run one GPU stage, turning ZeroGPU's refusals into plain language.
+
+    A refused reservation is not a bug, it is the visitor being out of free GPU
+    time, and the raw message ("requested GPU duration ... larger than the
+    maximum allowed") tells them nothing about what to do next.
+    """
+    try:
+        return fn(*args)
+    except Exception as e:
+        msg = str(e).lower()
+        if any(k in msg for k in ("duration", "quota", "maximum allowed",
+                                  "exceeded")):
+            raise gr.Error(
+                "Out of free GPU time for this image. Every visitor gets a "
+                "daily GPU budget from Hugging Face: 2 minutes when signed "
+                "out, 5 minutes with a free account. Sign in to Hugging Face "
+                "and reload, come back tomorrow, or crop the image smaller "
+                "and try again."
+            ) from e
+        raise
 
 
 @spaces.GPU(duration=_segment_duration)
@@ -463,7 +496,7 @@ def run_rootscope(tif_path, tif_file, um_per_px, which_model, label_cells,
 
     # ---- GPU: segmentation ----
     progress(0.10, desc="Segmenting with Cellpose-SAM (GPU)")
-    masks = _segment(img_rgb)
+    masks = _gpu_call(_segment, img_rgb)
     n_cells = int(masks.max())
     if n_cells == 0:
         raise gr.Error("Cellpose-SAM found no cells in this image.")
@@ -478,7 +511,7 @@ def run_rootscope(tif_path, tif_file, um_per_px, which_model, label_cells,
 
     # ---- GPU: DINOv2 embeddings ----
     progress(0.50, desc="DINOv2 embeddings (GPU)")
-    df_base = _embed(masks, img_rgb, df_base)
+    df_base = _gpu_call(_embed, masks, img_rgb, df_base)
 
     # ---- CPU: iterative classification, post-processing, overlays ----
     progress(0.65, desc="Classifying cells (iterative ensemble)")
@@ -596,6 +629,17 @@ with gr.Blocks(title=TITLE, **_blocks_kwargs) as demo:
                          "until predictions stop changing.",
                 )
             run_btn = gr.Button("Run RootScope", variant="primary")
+            # Hugging Face meters free GPU per visitor, not per Space, so the
+            # daily budget is theirs to raise by signing in. Saying so here is
+            # cheaper than fielding "it stopped working" reports; the
+            # Cellpose-SAM Space carries the same note.
+            gr.Markdown(
+                "<sub>Free GPU time is per visitor, per day: 2 minutes signed "
+                "out, 5 minutes with a free "
+                "[Hugging Face account](https://huggingface.co/join). One "
+                "image costs roughly 30 seconds. Sign in and reload if you run "
+                "out.</sub>"
+            )
             if SHOW_DIAGNOSTICS:
                 with gr.Accordion("Diagnostics", open=False):
                     env_btn = gr.Button("Report environment (no GPU needed)")
