@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-STEP 30 — Train the iterative cell-type classifier (with DINOv2 embeddings).
+STEP 30: Train the iterative cell-type classifier (with DINOv2 embeddings).
 
 Trains the RandomForest / XGBoost / LightGBM ensemble with iterative
 self-training: each round fills in neighbor cell-types from the previous round's
@@ -14,7 +14,7 @@ Run:
         --out-dir trained_model_iterative_cnn_finetuned \
         --n-estimators 500 --max-rounds 10
 
-(Thin wrapper around rootscope.train — see that module for all flags.)
+(Thin wrapper around rootscope.train; see that module for all flags.)
 """
 from rootscope.train import main
 

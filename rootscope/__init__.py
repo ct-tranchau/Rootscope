@@ -1,5 +1,5 @@
 """
-Rootscope — cell-type prediction for confocal root-tip cross-section images.
+Rootscope: cell-type prediction for confocal root-tip cross-section images.
 
 Give it a TIFF, it segments the cells (Cellpose-SAM), extracts shape / size /
 intensity / layer features plus fine-tuned DINOv2 embeddings, and predicts the

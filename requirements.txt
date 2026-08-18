@@ -5,12 +5,12 @@
 #
 # Versions are pinned to the set this release was built and validated against,
 # so predictions reproduce exactly. scikit-learn in particular MUST stay at
-# 1.7.2 — the released .joblib models were pickled with it, and other versions
+# 1.7.2. The released .joblib models were pickled with it, and other versions
 # can fail to unpickle or silently change behaviour.
 #
 # GPU note: the torch wheels below are the default PyPI builds (CUDA 12.1 on
 # Linux). For a specific CUDA version, or for a CPU-only install, see
-# https://pytorch.org/get-started/locally/ — or use environment.yml with conda.
+# https://pytorch.org/get-started/locally/, or use environment.yml with conda.
 
 # ── core scientific stack ────────────────────────────────────────────────────
 numpy==2.2.6

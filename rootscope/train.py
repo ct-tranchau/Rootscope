@@ -436,7 +436,7 @@ def train(df, feature_cols, out_dir, n_estimators=500, random_state=42,
 
     for name in model_names:
         print(f"\n{'='*60}")
-        print(f"  {name} — ITERATIVE SELF-TRAINING (max {max_rounds} rounds)")
+        print(f"  {name}: ITERATIVE SELF-TRAINING (max {max_rounds} rounds)")
         print(f"{'='*60}")
         sys.stdout.flush()
 
@@ -775,7 +775,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print("CELL TYPE CLASSIFIER — ITERATIVE SELF-TRAINING")
+    print("CELL TYPE CLASSIFIER: ITERATIVE SELF-TRAINING")
     print("=" * 70)
 
     print(f"\n[1] Loading features from {args.features}...")

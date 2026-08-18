@@ -1,6 +1,6 @@
 # Model weights
 
-The trained weights are **not** stored in this Git repository — they are too
+The trained weights are **not** stored in this Git repository; they are too
 large for GitHub (the RandomForest model alone is ~350 MB). They live on the
 Hugging Face Hub at
 **[ct-tranchau/Rootscope](https://huggingface.co/ct-tranchau/Rootscope)**, and
@@ -27,11 +27,11 @@ minority class (the RF-trust rule in `predict.py`), and it is the only bagging
 model of the three, so it decorrelates from XGBoost and LightGBM, which tend to
 agree with each other.
 
-Prediction still runs if `model_RandomForest.joblib` is missing — it falls back
-to the XGBoost + LightGBM ensemble — but results will differ from the published
+Prediction still runs if `model_RandomForest.joblib` is missing, falling back
+to the XGBoost + LightGBM ensemble, but results will differ from the published
 model.
 
-## For maintainers — publishing the weights
+## For maintainers: publishing the weights
 
 Run [`scripts/upload_weights.sh`](../scripts/upload_weights.sh), which uploads
 every file above to the Hub repo named in `DEFAULT_HF_REPO`
@@ -43,7 +43,7 @@ To publish somewhere else instead, set `ROOTSCOPE_HF_REPO` (a different Hub repo
 or `ROOTSCOPE_MODELS_URL` (any base URL where `<base-url>/model_LightGBM.joblib`
 downloads directly).
 
-## For users — using your own weights
+## For users: using your own weights
 
 Drop the files into this `models/` folder, or point at them explicitly:
 

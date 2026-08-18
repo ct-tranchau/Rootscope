@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-STEP 10 — Feature extraction.
+STEP 10: Feature extraction.
 
 Segment TIF/BMP pairs with Cellpose-SAM, compute the BFS tissue-layer index,
 extract shape/size/intensity features, and read the ground-truth cell type from
@@ -12,7 +12,7 @@ Run:
         --tif-dir ./tif --bmp-dir ./bmp \
         --out-dir feature_outputs_finetuned --gpu
 
-(Thin wrapper around rootscope.extract_features — see that module for all flags.)
+(Thin wrapper around rootscope.extract_features; see that module for all flags.)
 """
 from rootscope.extract_features import main
 

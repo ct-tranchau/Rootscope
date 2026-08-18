@@ -10,14 +10,14 @@ this priority order:
   3. A local ``models/`` folder next to the installed package.
   4. Auto-download from the Hugging Face Hub repo ``DEFAULT_HF_REPO``, cached in
      ``~/.cache/huggingface`` (override with ``ROOTSCOPE_HF_REPO``).
-  5. Auto-download from a plain base URL, if ``ROOTSCOPE_MODELS_URL`` is set —
+  5. Auto-download from a plain base URL, if ``ROOTSCOPE_MODELS_URL`` is set,
      an escape hatch for self-hosting the weights somewhere else.
 
 The very first prediction downloads the weights once; every run after that uses
 the cache. Downloads via the Hub resume if interrupted and are checksummed, so
 a dropped connection does not mean starting over.
 
-Note: the Cellpose-SAM segmentation weights are NOT handled here — the
+Note: the Cellpose-SAM segmentation weights are NOT handled here; the
 ``cellpose`` library downloads and caches those itself on first use.
 """
 
@@ -242,7 +242,7 @@ def resolve_cnn_weights(user_arg: str | None = None) -> Path | None:
             print(f"[rootscope] Could not download {CNN_WEIGHTS_FILE}: {e}")
 
     print(
-        "[rootscope] WARNING: fine-tuned DINOv2 backbone not found — falling "
+        "[rootscope] WARNING: fine-tuned DINOv2 backbone not found, falling "
         "back to pretrained DINOv2. Predictions will be less accurate than the "
         "published model. Provide --cnn-weights backbone.pt to fix this."
     )

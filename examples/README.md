@@ -26,7 +26,7 @@ rootscope --tif-dir examples/ --out results/
 Reference output from the `Ensemble` model (the published result), measured on
 CPU with the pixel scales above:
 
-### `Acorulea_RootTip_Maturation.tif` — 910×910, `--um-per-px 0.6478`
+### `Acorulea_RootTip_Maturation.tif` (910×910, `--um-per-px 0.6478`)
 
 **443 cells**
 
@@ -41,7 +41,7 @@ CPU with the pixel scales above:
 | pericycle | 14 |
 | endodermis | 11 |
 
-### `Spennellii_RootTip_EarlyMaturation.tif` — 700×700, `--um-per-px 0.4546`
+### `Spennellii_RootTip_EarlyMaturation.tif` (700×700, `--um-per-px 0.4546`)
 
 **214 cells**
 

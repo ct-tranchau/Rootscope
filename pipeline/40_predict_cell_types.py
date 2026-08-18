@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-STEP 40 — Predict cell types on new images (research/reproducibility form).
+STEP 40: Predict cell types on new images (research/reproducibility form).
 
 Segments a new TIF, extracts features, and predicts cell types with iterative
 refinement, writing per-cell CSVs + labeled overlays. This is the explicit,
@@ -15,7 +15,7 @@ Run:
         --um-per-px 1.0 --out-dir predictions_iterative_finetuned \
         --max-rounds 10 --gpu
 
-(Thin wrapper around rootscope.predict — see that module for all flags.)
+(Thin wrapper around rootscope.predict; see that module for all flags.)
 """
 from rootscope.predict import main
 

@@ -1,7 +1,7 @@
 # Full pipeline (reproducibility)
 
 These numbered scripts reproduce the complete workflow used to build the
-published Rootscope model. **Most users do not need this** — to predict on your
+published Rootscope model. **Most users do not need this**. To predict on your
 own images just use the `rootscope` command (see the top-level README).
 
 Run the steps in order. Each script is a thin wrapper around a module in the
@@ -16,10 +16,10 @@ Run the steps in order. Each script is a thin wrapper around a module in the
 
 ### Inputs you need for training
 
-- **TIF images** (`tif/`) — raw confocal root-tip cross-sections.
-- **BMP overlays** (`bmp/`) — color-coded ground-truth cell-type masks, one per
-  TIF. Only needed for steps 10 (to read labels) — **not** needed to predict.
-- **Metadata CSV** (`metadata_with_tif_sizes3.csv`) — lists the TIF/BMP pairs,
+- **TIF images** (`tif/`): raw confocal root-tip cross-sections.
+- **BMP overlays** (`bmp/`): color-coded ground-truth cell-type masks, one per
+  TIF. Only needed for steps 10 (to read labels), **not** needed to predict.
+- **Metadata CSV** (`metadata_with_tif_sizes3.csv`): lists the TIF/BMP pairs,
   species, and stage.
 
 These raw data are **not** included in this repository (size / licensing); see

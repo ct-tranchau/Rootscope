@@ -72,14 +72,14 @@ Held-out test accuracy, 480 features, 9 classes:
 | XGBoost | 0.959 |
 | RandomForest | 0.937 |
 
-Inference: ~1.5–3 min per image on a single GPU.
+Inference: ~1.5-3 min per image on a single GPU.
 
 ## Notes
 
-- Set `--um-per-px` to your image's real scale — it is not auto-detected, and
+- Set `--um-per-px` to your image's real scale. It is not auto-detected, and
   the default of 1.0 distorts every size feature.
 - Input must be a raw image, not a segmentation mask.
-- CPU works but is far slower (~15–30 min per image).
+- CPU works but is far slower (~15-30 min per image).
 - `scikit-learn` is pinned to 1.7.2, the version these models were saved with.
 
 ## Contact

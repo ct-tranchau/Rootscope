@@ -28,12 +28,12 @@ pip install .                           # 2. the package
 ```
 
 > **No GPU?** In `environment.yml`, change `pytorch-cuda=12.1` to `cpuonly`.
-> Prediction still works, but expect ~15–30 min per image instead of ~2 min.
+> Prediction still works, but expect ~15-30 min per image instead of ~2 min.
 
 The first prediction downloads the trained model weights (~460 MB) once from
 [huggingface.co/ct-tranchau/Rootscope](https://huggingface.co/ct-tranchau/Rootscope)
 and caches them in `~/.cache/huggingface`, so later runs start instantly.
-Cellpose-SAM downloads its own segmentation weights automatically on first use —
+Cellpose-SAM downloads its own segmentation weights automatically on first use,
 so you need an internet connection the first time you run Rootscope.
 
 ---
@@ -63,7 +63,7 @@ rootscope --tif-dir my_tifs/ --out results/
 | `--max-rounds N` | iterative-refinement rounds (default 10) |
 
 By default the overlay shows colored cells plus a legend. `--label-cells` also
-prints an abbreviated type name inside every cell — handy when zooming into one
+prints an abbreviated type name inside every cell, handy when zooming into one
 region, but on a dense cross-section the text overlaps and hides the image,
 which is why it is off by default.
 
@@ -82,9 +82,9 @@ print(df.head())        # one row per cell, with predicted cell type
 
 For each input image, `results/` contains, per model:
 
-- `<image>_<Model>_predictions.csv` — one row per cell (id, centroid, features,
+- `<image>_<Model>_predictions.csv`: one row per cell (id, centroid, features,
   predicted `cell_type`)
-- `<image>_<Model>_overlay.png` — original image with cells colored by predicted
+- `<image>_<Model>_overlay.png`: original image with cells colored by predicted
   type
 
 Batch mode also writes a combined `all_predictions.csv`.
@@ -125,8 +125,8 @@ metadata so you do not have to remember it.
 
 ### Web app
 
-`webapp/` holds a Gradio front end — upload a TIFF in the browser, get the
-overlay and per-cell CSV back — designed to run on a Hugging Face Space with
+`webapp/` holds a Gradio front end for uploading a TIFF in the browser and getting
+the overlay and per-cell CSV back, designed to run on a Hugging Face Space with
 ZeroGPU, in the style of the
 [Cellpose-SAM Space](https://huggingface.co/spaces/mouseland/cellpose).
 

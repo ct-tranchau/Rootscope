@@ -83,7 +83,7 @@ def main(argv=None):
                 label_cells=args.label_cells,
             )
             n = 0 if df is None else len(df)
-            print(f"\n[rootscope] Done — {n} cell predictions written to {args.out_dir}/")
+            print(f"\n[rootscope] Done. {n} cell predictions written to {args.out_dir}/")
         else:
             df = api.predict_folder(
                 args.tif_dir, out_dir=args.out_dir, gpu=use_gpu,
@@ -92,7 +92,7 @@ def main(argv=None):
                 label_cells=args.label_cells, pattern=args.pattern,
             )
             n = 0 if df is None else len(df)
-            print(f"\n[rootscope] Done — {n} total predictions written to {args.out_dir}/")
+            print(f"\n[rootscope] Done. {n} total predictions written to {args.out_dir}/")
     except (FileNotFoundError, RuntimeError) as e:
         print(f"\n[rootscope] ERROR: {e}", file=sys.stderr)
         sys.exit(1)

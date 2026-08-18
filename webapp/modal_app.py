@@ -1,5 +1,5 @@
 """
-Deploy the RootScope web app on Modal — a permanent public URL, free tier.
+Deploy the RootScope web app on Modal: a permanent public URL, free tier.
 
 This serves the very same Gradio interface as webapp/app.py (the one written
 for Hugging Face Spaces). Users visit a URL, upload a TIFF, and download the
@@ -7,7 +7,7 @@ overlay and per-cell CSV. Nothing about the UI changes; only where it runs.
 
 Why this exists: hosting a ZeroGPU Space needs an account at least 30 days old,
 and Modal has no such gate. Modal's free Starter plan includes $30/month of
-compute credits, bills per second, and scales to zero when idle — at roughly a
+compute credits, bills per second, and scales to zero when idle. At roughly a
 minute of GPU-container time per image that is on the order of a thousand
 images a month at no cost.
 

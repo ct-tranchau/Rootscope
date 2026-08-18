@@ -35,8 +35,8 @@ billed for the GPU work alone:
 
 The two GPU stages are wrapped at three duration tiers (60 / 180 / 300 s),
 chosen by image size and cell count, so a small image doesn't reserve a long
-slot against the user's daily quota. All models — the ~460 MB of classifiers,
-the Cellpose-SAM weights, and the DINOv2 backbone — load **once at startup**,
+slot against the user's daily quota. All models (the ~460 MB of classifiers,
+the Cellpose-SAM weights, and the DINOv2 backbone) load **once at startup**,
 not per request.
 
 ## Measured runtimes
@@ -55,9 +55,9 @@ were taken on), for the two images in `examples/`:
 
 Startup costs ~12 s once (classifiers 2.2 s, Cellpose-SAM 6.1 s, DINOv2 3.4 s).
 
-The GPU-eligible stages are 84–91% of the CPU work. On an actual GPU they
+The GPU-eligible stages are 84-91% of the CPU work. On an actual GPU they
 should shrink dramatically while the CPU stages stay roughly fixed (~14 s and
-~43 s respectively) — which is the point of the split: those seconds are not
+~43 s respectively), which is the point of the split: those seconds are not
 billed against the GPU reservation. **The GPU figures have not been measured**;
 re-time on the target hardware before trusting the tier thresholds.
 
@@ -65,7 +65,7 @@ re-time on the target hardware before trusting the tier thresholds.
 
 | Option | Cost | Good for |
 |---|---|---|
-| **HF Space + ZeroGPU** | free, **but see eligibility below** | the public demo — recommended |
+| **HF Space + ZeroGPU** | free, **but see eligibility below** | the public demo, recommended |
 | HF Space + T4 Small | $0.40/hr (~$290/mo always-on) | no duration caps, heavy or private use |
 | Google Colab notebook | free, no eligibility gate | users who need batches beyond the daily quota |
 | VT ARC / lab GPU node | free (already yours) | unpublished data that must not leave the institution |
@@ -73,7 +73,7 @@ re-time on the target hardware before trusting the tier thresholds.
 
 > **Gradio Spaces are no longer free on `cpu-basic`.** Only *static* Spaces
 > are. Hosting this app on Hugging Face at any tier requires either ZeroGPU
-> eligibility or a paid plan — verified by two HTTP 402s when attempting to
+> eligibility or a paid plan, verified by two HTTP 402s when attempting to
 > create the Space on 2026-08-17.
 
 ### ZeroGPU hosting eligibility
@@ -111,13 +111,13 @@ Two things to decide before publishing:
   personal account is a bus-factor risk for a tool cited in a paper.
 - **Data sensitivity.** Uploads go to Hugging Face infrastructure. If
   collaborators' unpublished images cannot leave VT, host on the lab's own GPU
-  node instead — `app.py` runs there unchanged, since the `spaces` import is
+  node instead. `app.py` runs there unchanged, since the `spaces` import is
   optional.
 
 ## Known issue: XGBoost is incompatible with ZeroGPU
 
 **Unpickling the XGBoost classifier at module level makes every subsequent
-ZeroGPU task abort** — including a bare `torch.zeros(2048, 2048, device="cuda")`.
+ZeroGPU task abort**, including a bare `torch.zeros(2048, 2048, device="cuda")`.
 
 Bisected on 2026-08-18 with a 25-line Space that did nothing but load one model
 and allocate a CUDA tensor:
@@ -143,11 +143,11 @@ builds the booster, which collides with the CUDA emulation ZeroGPU runs outside
 
 ### Options
 
-1. **Dedicated GPU hardware** (T4 small, $0.40/hr) — no ZeroGPU, so no
+1. **Dedicated GPU hardware** (T4 small, $0.40/hr): no ZeroGPU, so no
    snapshotting and no conflict. `app.py` needs no changes: `@spaces.GPU` is
    documented as a no-op off ZeroGPU. Set a sleep timer so it only bills while
    in use.
-2. **Modal** (see below) — same, and free on the Starter tier.
+2. **Modal** (see below): same, and free on the Starter tier.
 3. **Isolate XGBoost in a subprocess** so the main process never loads it.
    Keeps ZeroGPU and the exact published ensemble, but needs real work in
    `stage_classify`.
@@ -157,8 +157,8 @@ builds the booster, which collides with the CUDA emulation ZeroGPU runs outside
 
 ## Deploy to Modal (no waiting period)
 
-Modal has no account-age gate, so this is the way to get the real thing — a
-permanent URL, upload, download — live today. `webapp/modal_app.py` serves the
+Modal has no account-age gate, so this is the way to get the real thing (a
+permanent URL, upload, download) live today. `webapp/modal_app.py` serves the
 exact same `app.py`, so the interface is identical to the Space.
 
 ```bash
@@ -182,7 +182,7 @@ Pin `ROOTSCOPE_SPEC` in that file to a tag or commit before sharing the URL.
 
 ## Deploy to Hugging Face Spaces
 
-The Space and the model weights are separate repos and can share a name — the
+The Space and the model weights are separate repos and can share a name; the
 `spaces/` prefix keeps them apart:
 
 | | |
@@ -215,7 +215,7 @@ duration cap.
 ### What ZeroGPU gives your users
 
 The GPU is allocated on demand for the duration of each `@spaces.GPU` call and
-released immediately after — visitors do not get a GPU for the whole session,
+released immediately after. Visitors do not get a GPU for the whole session,
 only for the two stages that need one. Backing hardware is half an NVIDIA RTX
 Pro 6000 Blackwell (48 GB) by default.
 
@@ -236,17 +236,17 @@ speed, which is still unmeasured.
 
 The Cellpose-SAM Space reserves only `duration=10` for images up to 1000 px,
 which anchors what its segmentation costs on ZeroGPU. Our examples are
-700–910 px, so:
+700-910 px, so:
 
 | Stage | Measured on CPU | Expected on ZeroGPU |
 |---|---|---|
-| Cellpose-SAM segmentation | 95–148 s | ~10 s |
-| DINOv2 embeddings (215–448 cells) | 43–80 s | ~2–5 s |
-| **Billed GPU time per image** | — | **~15 s** |
+| Cellpose-SAM segmentation | 95-148 s | ~10 s |
+| DINOv2 embeddings (215-448 cells) | 43-80 s | ~2-5 s |
+| **Billed GPU time per image** | n/a | **~15 s** |
 
 At ~15 GPU-seconds per image that works out to roughly 8 images/day for a
 signed-out visitor, ~20 for a free account, and ~160 for PRO. The CPU stages
-(14–43 s measured) are free. **This is an estimate, not a measurement** — no
+(14-43 s measured) are free. **This is an estimate, not a measurement**: no
 GPU was available to time it on.
 
 ### Memory
@@ -261,28 +261,28 @@ Peak RSS measured end-to-end on the 910×910 / 448-cell example: **3.3 GiB**.
 | DINOv2 backbone | ~0 (shares torch allocations) |
 | Processing one image | 0.09 GiB |
 
-Comfortably within a Space's limits, and flat per request — the models are
+Comfortably within a Space's limits, and flat per request: the models are
 resident, so a second image adds only ~0.1 GiB.
 
 ### Version constraints
 
 ZeroGPU supports **torch 2.8.0+** and Python 3.10.13 / 3.12.12, and works only
 with the Gradio SDK. RootScope's own `requirements.txt` pins `torch==2.4.0`,
-which ZeroGPU will not run — see the note in `webapp/requirements.txt`. The
+which ZeroGPU will not run; see the note in `webapp/requirements.txt`. The
 Space therefore runs an untested torch/cellpose combination; validate the two
 example images against a local run before announcing it.
 
 ### Verified against
 
 Gradio **5.49.1** (what `sdk_version` pins above, and what the live Space
-reports). The app also runs on Gradio 6 — it detects which major version it is
+reports). The app also runs on Gradio 6: it detects which major version it is
 on and passes `theme` to `Blocks()` or to `launch()` accordingly. Raising
 `sdk_version` forces a rebuild on an untested Gradio major, so re-run the
 example images afterwards.
 
 ### Before you announce it
 
-- **Pin the RootScope version** in `requirements.txt` — swap `@main` for a tag
+- **Pin the RootScope version** in `requirements.txt`: swap `@main` for a tag
   or commit SHA so a later push can't silently change what users get.
 - **Pre-cache the weights.** On first boot the Space downloads ~460 MB from
   `ct-tranchau/Rootscope`, ~85 MB for the DINOv2 backbone via `torch.hub`, and
@@ -293,7 +293,7 @@ example images afterwards.
 
 ## Running it locally
 
-The same `app.py` runs without Hugging Face — the `spaces` import is optional
+The same `app.py` runs without Hugging Face: the `spaces` import is optional
 and the `@spaces.GPU` decorator degrades to a no-op:
 
 ```bash
@@ -302,7 +302,7 @@ pip install gradio
 python webapp/app.py
 ```
 
-On a CPU-only machine expect 15–30 minutes per image, so use a GPU node.
+On a CPU-only machine expect 15-30 minutes per image, so use a GPU node.
 
 ## Deliberate differences from the Cellpose-SAM Space
 

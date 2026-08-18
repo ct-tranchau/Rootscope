@@ -1,5 +1,5 @@
 """
-RootScope on Hugging Face Spaces — upload a root-tip TIFF, get segmented and
+RootScope on Hugging Face Spaces: upload a root-tip TIFF, get segmented and
 classified cells back.
 
 Modelled on the Cellpose-SAM Space (huggingface.co/spaces/mouseland/cellpose),
@@ -49,7 +49,7 @@ except ImportError:  # noqa: BLE001
     spaces = _NoSpaces()  # type: ignore[assignment]
 
 
-print = functools.partial(print, flush=True)  # noqa: A001 — Spaces log stdout
+print = functools.partial(print, flush=True)  # noqa: A001 (Spaces log stdout)
 
 # Everything the UI serves back (previews, overlays, CSVs, ZIPs) is written
 # under here, and this one directory is handed to launch(allowed_paths=...).
@@ -61,9 +61,9 @@ TMP_ROOT.mkdir(parents=True, exist_ok=True)
 MAX_PIXELS = 40_000_000  # ~6300x6300; refuse anything larger
 
 # The Diagnostics panel is a developer tool, not something a visitor should
-# see, so it is off by default. It earned its keep once already — it is how the
+# see, so it is off by default. It earned its keep once already: it is how the
 # ZeroGPU "GPU task aborted" failure was pinned to the XGBoost import rather
-# than to the pipeline — so it stays in the file behind a switch instead of
+# than to the pipeline, so it stays in the file behind a switch instead of
 # being deleted. To turn it on, add ROOTSCOPE_DIAGNOSTICS=1 in the Space's
 # Settings → Variables and restart; no code change needed.
 SHOW_DIAGNOSTICS = os.environ.get("ROOTSCOPE_DIAGNOSTICS") == "1"
@@ -71,7 +71,7 @@ MODEL_CHOICES = ["Ensemble", "RandomForest", "LightGBM", "XGBoost"]
 
 # ── fetch weights at startup, load nothing ───────────────────────────────────
 # Downloading here means the first visitor does not wait for ~550 MB. Note that
-# these calls only put files on disk — they unpickle nothing.
+# these calls only put files on disk; they unpickle nothing.
 print("[rootscope-web] fetching weights...")
 MODEL_DIR = resolve_model_dir()
 CNN_WEIGHTS = resolve_cnn_weights()
@@ -80,14 +80,14 @@ CNN_WEIGHTS = resolve_cnn_weights()
 #
 # Unpickling XGBoost builds a Booster, which probes for CUDA devices, which
 # registers state ZeroGPU's snapshot/restore cannot reproduce. Once that has
-# happened in this process every @spaces.GPU task aborts — verified on this
+# happened in this process every @spaces.GPU task aborts, verified on this
 # Space, where the diagnostics' bare torch.zeros(2048, 2048, device="cuda")
 # came back "GPU task aborted" on a healthy CUDA 13.0 / torch 2.11 box.
 #
 # Having the model merely resident is enough, so loading it lazily on the
 # classification path would not help: the GPU stages run first and would
 # already be poisoned on the second request. Every classifier therefore lives
-# in a subprocess that exits when it is done — see classify_worker.py.
+# in a subprocess that exits when it is done. See classify_worker.py.
 CLASSIFY_WORKER = Path(__file__).resolve().parent / "classify_worker.py"
 
 # NOTE: nothing is placed on CUDA at import.
@@ -121,7 +121,7 @@ def _gpu_dinov2():
     return _GPU_MODELS["dinov2"]
 
 
-print(f"[rootscope-web] ready — weights at {MODEL_DIR}")
+print(f"[rootscope-web] ready: weights at {MODEL_DIR}")
 print("[rootscope-web] no classifier loaded in this process (ZeroGPU safe); "
       "classification runs in a subprocess")
 print("[rootscope-web] GPU models load on first use (no CUDA touched at import)")
@@ -133,7 +133,7 @@ print("[rootscope-web] GPU models load on first use (no CUDA touched at import)"
 
 # ZeroGPU bills the wall-clock of each @spaces.GPU call against the visitor's
 # daily quota, and a call that overruns its reservation is killed. Rather than
-# bucket into fixed tiers, ask for a duration computed from the actual input —
+# bucket into fixed tiers, ask for a duration computed from the actual input;
 # ZeroGPU accepts a callable taking the same arguments as the function.
 #
 # Calibrated from CPU measurements (segmentation 95 s at 700x700 / 148 s at
@@ -287,7 +287,7 @@ def read_um_per_px(tif_path):
     """Pull the pixel size out of the TIFF metadata, if it has any.
 
     RootScope does not read the scale from the file, and the 1.0 default
-    silently distorts every size-derived feature — so prefill the box rather
+    silently distorts every size-derived feature, so prefill the box rather
     than let the user forget.
     """
     try:
@@ -315,7 +315,7 @@ def _preview_png(img_rgb):
     """Write a display-only PNG of the (max-projected) image.
 
     The gr.Image component is filepath-typed, so whatever we show becomes its
-    value. That displayed PNG must never become the thing we segment — the
+    value. That displayed PNG must never become the thing we segment. The
     original TIFF path is kept in a State instead.
     """
     tmp = tempfile.NamedTemporaryFile(suffix="_preview.png", delete=False,
@@ -338,11 +338,11 @@ def on_upload(filepath):
     if Path(filepath).suffix.lower() not in (".tif", ".tiff"):
         return (preview, gr.update(),
                 f"That file is `{Path(filepath).suffix}`, not a TIFF. RootScope "
-                f"expects the original 16-bit confocal TIFF — a PNG or JPEG has "
+                f"expects the original 16-bit confocal TIFF. A PNG or JPEG has "
                 f"already lost bit depth and metadata.", filepath)
     scale = read_um_per_px(filepath)
     if scale is None:
-        note = (f"Loaded {w}×{h}. **No pixel size in the metadata** — set "
+        note = (f"Loaded {w}×{h}. **No pixel size in the metadata**. Set "
                 f"microns/pixel yourself; leaving it at 1.0 distorts every "
                 f"size-derived feature.")
         return preview, gr.update(), note, filepath
@@ -354,7 +354,7 @@ def _classify_subprocess(workdir, **job):
     """Run the CPU classification stage in a child process and return its table.
 
     The child loads the classifiers itself and exits, so no XGBoost Booster is
-    ever built in this process — see classify_worker.py for why that matters.
+    ever built in this process. See classify_worker.py for why that matters.
 
     The job goes over a pickle in the run's own directory rather than through a
     pipe: `masks` and `img_rgb` are a few MB each and a file is easier to
@@ -373,7 +373,7 @@ def _classify_subprocess(workdir, **job):
         cwd=str(CLASSIFY_WORKER.parent),
         capture_output=True, text=True, timeout=1800,
     )
-    # The child's stdout is the classification log — surface it in the Space
+    # The child's stdout is the classification log, so surface it in the Space
     # logs as if it had run here.
     if proc.stdout:
         print(proc.stdout, end="")
@@ -394,7 +394,7 @@ def _classify_subprocess(workdir, **job):
     if not result.get("ok"):
         print("[rootscope-web] CLASSIFICATION FAILED\n"
               + result.get("traceback", "(no traceback)"))
-        raise gr.Error("Classification failed — see the Space logs.")
+        raise gr.Error("Classification failed. See the Space logs.")
     return result["df"]
 
 
@@ -436,7 +436,7 @@ def _render(results, model_name):
 def run_rootscope(tif_path, tif_file, um_per_px, which_model, label_cells,
                   max_rounds, progress=gr.Progress()):
     # tif_path comes from the State that on_upload fills; tif_file is whatever
-    # the File component is holding right now. Either alone is fragile — the
+    # the File component is holding right now. Either alone is fragile: the
     # State is empty if Run is pressed before on_upload finishes, and it is
     # dropped on a page reload. Three runs died on "Upload a TIFF first" in the
     # Space logs with a file plainly selected, so take whichever we have.
@@ -469,7 +469,7 @@ def run_rootscope(tif_path, tif_file, um_per_px, which_model, label_cells,
         raise gr.Error("Cellpose-SAM found no cells in this image.")
 
     # ---- CPU: tissue layers + handcrafted features ----
-    progress(0.35, desc=f"{n_cells} cells — layer index and features")
+    progress(0.35, desc=f"{n_cells} cells, layer index and features")
     masks, df_base, layer_lookup, adjacency, n_layers = rs.stage_features(
         masks, img_rgb, um_per_px=float(um_per_px))
     if df_base is None:
@@ -513,7 +513,7 @@ def run_rootscope(tif_path, tif_file, um_per_px, which_model, label_cells,
 
 
 def switch_model(results, model_name):
-    """Swap the displayed model without recomputing — every model's overlay and
+    """Swap the displayed model without recomputing, since every model's overlay and
     CSV was already written to the run's temp dir."""
     if not results or model_name not in results.get("available", []):
         return gr.update(), gr.update(), gr.update(), gr.update()
@@ -576,7 +576,7 @@ with gr.Blocks(title=TITLE, **_blocks_kwargs) as demo:
                 label="Microns per pixel",
                 value=1.0,
                 info="Read from the file's metadata when present. This is not "
-                     "optional — the 1.0 default distorts every size-derived "
+                     "optional. The 1.0 default distorts every size-derived "
                      "feature.",
             )
             model_pick = gr.Dropdown(

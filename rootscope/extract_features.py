@@ -675,7 +675,7 @@ def extract_all_features(masks, img_rgb, um_per_px, layer_lookup, adjacency,
         #    have fewer cells than thick cortex
         cells_in_same_layer = layer_cell_counts.get(my_layer, 0) if my_layer >= 0 else 0
 
-        # 3. Neighbors inward vs outward — ring cells have neighbors
+        # 3. Neighbors inward vs outward, ring cells have neighbors
         #    on both sides; cortex cells mostly have same-layer neighbors
         inner_neighbor_count = 0
         outer_neighbor_count = 0
@@ -725,7 +725,7 @@ def extract_all_features(masks, img_rgb, um_per_px, layer_lookup, adjacency,
         #    Exodermis = YES (neighbors epidermis), cortex/endodermis = NO
         cell_neighbors_boundary = 1 if cid in neighbors_boundary else 0
 
-        # 8. Min layer among neighbors — exodermis neighbors include
+        # 8. Min layer among neighbors, exodermis neighbors include
         #    epidermis (layer 0-1), cortex neighbors are all mid-layers
         min_neighbor_layer = min(neighbor_layers) if neighbor_layers else -1
         max_neighbor_layer = max(neighbor_layers) if neighbor_layers else -1
@@ -851,7 +851,7 @@ def extract_all_features(masks, img_rgb, um_per_px, layer_lookup, adjacency,
         HEXAGON_COMPACTNESS = 0.9069
         hexagonality = round(1.0 - abs(compactness - HEXAGON_COMPACTNESS), 4)
 
-        # 5. Convex hull vertex count — hexagons have ~6 vertices
+        # 5. Convex hull vertex count, hexagons have ~6 vertices
         try:
             from skimage.measure import approximate_polygon
             coords = p.coords  # (N, 2) array of pixel coordinates
@@ -1266,7 +1266,7 @@ def extract_cnn_embedding_features(masks, img_rgb, use_gpu=True, weights_path=No
                                       weights_path=weights_path, model=model)
     except ImportError:
         import warnings
-        warnings.warn("cnn_embeddings module not found — skipping CNN features.")
+        warnings.warn("cnn_embeddings module not found, skipping CNN features.")
         return None
     except Exception as e:
         import warnings

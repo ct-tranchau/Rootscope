@@ -576,17 +576,17 @@ def load_image(tif_path):
 #
 # predict_single_tif() below runs these in order. They are also exposed
 # separately so a caller that pays for GPU time by the second (a web app on
-# ZeroGPU, say) can wrap only stage_segment and stage_embed — the two steps
-# that actually touch the GPU — and run the rest on CPU.
+# ZeroGPU, say) can wrap only stage_segment and stage_embed, the two steps
+# that actually touch the GPU, and run the rest on CPU.
 # ═══════════════════════════════════════════════════════════════
 
 def stage_segment(img_rgb, gpu=True, cellpose_model=None):
-    """GPU stage 1 — Cellpose-SAM. Returns the int32 label mask."""
+    """GPU stage 1: Cellpose-SAM. Returns the int32 label mask."""
     return segment_cellpose_sam(img_rgb, use_gpu=gpu, model=cellpose_model)
 
 
 def stage_features(masks, img_rgb, um_per_px=1.0, verbose=True):
-    """CPU stage — tissue mask, layer index, debris removal, handcrafted
+    """CPU stage: tissue mask, layer index, debris removal, handcrafted
     features.
 
     Debris removal edits ``masks`` in place, so the (possibly modified) mask is
@@ -634,7 +634,7 @@ def stage_features(masks, img_rgb, um_per_px=1.0, verbose=True):
 
 def stage_embed(masks, img_rgb, df_base, gpu=True, cnn_weights=None,
                 dinov2_model=None, verbose=True):
-    """GPU stage 2 — fine-tuned DINOv2 per-cell embeddings, merged into
+    """GPU stage 2: fine-tuned DINOv2 per-cell embeddings, merged into
     ``df_base``. Returns the merged table (unchanged if embeddings are
     unavailable)."""
     if verbose:
@@ -653,7 +653,7 @@ def stage_classify(df_base, masks, img_rgb, layer_lookup, adjacency,
                    models_dict, scalers, feature_cols, le,
                    out_dir="predictions", stem="image", source_name=None,
                    um_per_px=1.0, max_rounds=10, label_cells=False):
-    """CPU stage — iterative prediction with each model plus the weighted
+    """CPU stage: iterative prediction with each model plus the weighted
     ensemble, anatomical post-processing, and per-model CSV + overlay PNG.
 
     Returns the concatenated per-cell table across all models."""
@@ -921,7 +921,7 @@ def main():
         print(f"\n  Found {len(tif_paths)} TIF files in {tif_dir}")
 
     print(f"\n[2] Predicting cell types with {len(models_dict)} models "
-          f"({', '.join(models_dict.keys())}) — iterative, max {args.max_rounds} rounds...")
+          f"({', '.join(models_dict.keys())}), iterative, max {args.max_rounds} rounds...")
     all_tables = []
     for tif_path in tif_paths:
         try:

@@ -23,7 +23,7 @@ keywords = ["cell-type", "confocal", "root-tip", "cellpose", "dinov2", "segmenta
 # scikit-learn is the one hard pin: the released .joblib models were pickled
 # with 1.7.2, and other versions can fail to unpickle or change results.
 #
-# PyTorch is best installed via conda for correct CUDA support — see
+# PyTorch is best installed via conda for correct CUDA support; see
 # environment.yml. pip will still pull CPU/GPU wheels from PyPI if you install
 # this way.
 dependencies = [

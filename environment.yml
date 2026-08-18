@@ -9,7 +9,7 @@
 # rebuilding the environment.
 #
 # Versions are pinned to the set this release was built and validated against.
-# scikit-learn MUST stay at 1.7.2 — the released .joblib models were pickled
+# scikit-learn MUST stay at 1.7.2. The released .joblib models were pickled
 # with it, and other versions can fail to unpickle or silently change results.
 #
 # GPU: this pulls the CUDA 12.1 build of PyTorch.

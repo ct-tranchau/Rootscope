@@ -5,7 +5,7 @@ Why this file exists
 Unpickling the XGBoost classifier builds a Booster, and building a Booster
 probes for CUDA devices. On ZeroGPU that registers device state the
 snapshot/restore cycle cannot reproduce, so *every* subsequent ``@spaces.GPU``
-task in that process aborts — including a bare
+task in that process aborts, including a bare
 ``torch.zeros(2048, 2048, device="cuda")``. Confirmed on the live Space: the
 diagnostics' trivial-allocation step returned ``GPU task aborted`` while the
 environment itself was healthy (torch 2.11.0+cu130, ``cuda.is_available True``).
@@ -14,12 +14,12 @@ Merely having the model resident is enough to break the GPU stages, even though
 classification happens long after them. So the main process must never load a
 classifier at all. This worker loads all three from disk, does the whole
 iterative classify + post-process + overlay pass, writes its results, and
-exits — taking the poisoned CUDA state with it. The parent is left holding
+exits, taking the poisoned CUDA state with it. The parent is left holding
 torch state only, the same shape as the Cellpose-SAM Space, which snapshots
 cleanly.
 
 The cost is reloading ~460 MB of classifiers per run instead of once at
-startup: about 2 s against a 2–4 minute pipeline.
+startup: about 2 s against a 2-4 minute pipeline.
 
 Invoked by ``app.py`` as::
 

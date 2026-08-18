@@ -1,7 +1,7 @@
 # Dependencies for the RootScope Hugging Face Space.
 #
 # Copy this file (plus app.py, README.md, and the two example TIFFs) into the
-# Space repo — see webapp/README.md for the deploy steps.
+# Space repo. See webapp/README.md for the deploy steps.
 #
 # torch is NOT pinned here, deliberately. ZeroGPU only supports torch 2.8.0
 # and newer (2.8.0 / 2.9.1 / 2.10.0 / 2.11.0), whereas RootScope's own
