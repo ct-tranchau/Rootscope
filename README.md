@@ -1,11 +1,6 @@
 # RootScope: Cross-species Root Cell-Type Classification from Confocal Microscopy Images
 
-Rootscope takes a raw microscopy TIFF, **segments every cell with Cellpose-SAM**,
-extracts shape / size / intensity / tissue-layer features together with
-fine-tuned **DINOv2** embeddings, and predicts each cell's type using an
-iterative **RandomForest + XGBoost + LightGBM** ensemble. You get a per-cell
-CSV and a labeled overlay image.
-
+RootScope uses Cellpose-SAM to segment every cell and describes each one with morpho-topological features and fine-tuned DINOv2 embeddings. Classification is refined through an iterative process in which predictions from neighboring cells are fed back as new features, updating every label until the classification converges. Each cell is then assigned to one of nine anatomical types.
 
 ## Install
 
