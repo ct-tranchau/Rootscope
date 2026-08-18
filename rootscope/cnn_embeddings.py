@@ -13,44 +13,33 @@ import pandas as pd
 from skimage.measure import regionprops
 
 
-def extract_cnn_embeddings(masks, img_rgb, batch_size=64, use_gpu=True,
-                           padding=16, weights_path=None):
-    """
-    Extract DINOv2 ViT-S/14 embeddings for each cell in the segmentation mask.
+def load_dinov2(weights_path=None, use_gpu=True):
+    """Load the DINOv2 backbone (optionally with fine-tuned weights) onto the
+    right device and put it in eval mode.
 
-    Parameters
-    ----------
-    masks : np.ndarray (H, W) int32
-        Cell segmentation mask (0 = background, >0 = cell IDs).
-    img_rgb : np.ndarray (H, W, 3) uint8
-        Original RGB image.
-    batch_size : int
-        Number of cells to process at once.
-    use_gpu : bool
-        Move model to CUDA if available.
-    padding : int
-        Extra pixels around each cell's bounding box for context.
-
-    Returns
-    -------
-    pd.DataFrame
-        Columns: cell_id, cnn_emb_0, cnn_emb_1, ..., cnn_emb_383
+    Building this hits ``torch.hub`` and reads an ~85 MB state dict, so a
+    long-running caller (a web server) should call this once at startup and
+    pass the result to ``extract_cnn_embeddings(model=...)``. Returns None if
+    the backbone cannot be loaded.
     """
     try:
         import torch
-        import torchvision.transforms as T
     except ImportError:
         warnings.warn(
-            "PyTorch not available — skipping CNN embedding extraction. "
+            "PyTorch not available - skipping CNN embedding extraction. "
             "Install torch + torchvision to enable DINOv2 features."
         )
         return None
 
-    # Determine device
     device = torch.device("cpu")
     if use_gpu and torch.cuda.is_available():
         device = torch.device("cuda")
-        print(f"    CNN embeddings: using GPU ({torch.cuda.get_device_name(0)})")
+        try:
+            print(f"    CNN embeddings: using GPU ({torch.cuda.get_device_name(0)})")
+        except Exception:  # noqa: BLE001
+            # ZeroGPU and similar lazy-allocation setups report cuda as
+            # available before a device is actually attached.
+            print("    CNN embeddings: using GPU")
     else:
         if use_gpu:
             print("    CNN embeddings: GPU requested but not available, using CPU")
@@ -96,6 +85,47 @@ def extract_cnn_embeddings(masks, img_rgb, batch_size=64, use_gpu=True,
 
     model = model.to(device)
     model.eval()
+    return model
+
+
+def extract_cnn_embeddings(masks, img_rgb, batch_size=64, use_gpu=True,
+                           padding=16, weights_path=None, model=None):
+    """
+    Extract DINOv2 ViT-S/14 embeddings for each cell in the segmentation mask.
+
+    Parameters
+    ----------
+    masks : np.ndarray (H, W) int32
+        Cell segmentation mask (0 = background, >0 = cell IDs).
+    img_rgb : np.ndarray (H, W, 3) uint8
+        Original RGB image.
+    batch_size : int
+        Number of cells to process at once.
+    use_gpu : bool
+        Move model to CUDA if available.
+    padding : int
+        Extra pixels around each cell's bounding box for context.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns: cell_id, cnn_emb_0, cnn_emb_1, ..., cnn_emb_383
+    """
+    try:
+        import torch
+        import torchvision.transforms as T
+    except ImportError:
+        warnings.warn(
+            "PyTorch not available - skipping CNN embedding extraction. "
+            "Install torch + torchvision to enable DINOv2 features."
+        )
+        return None
+
+    if model is None:
+        model = load_dinov2(weights_path=weights_path, use_gpu=use_gpu)
+        if model is None:
+            return None
+    device = next(model.parameters()).device
 
     # DINOv2 preprocessing: resize to 224x224, normalize with ImageNet stats
     transform = T.Compose([

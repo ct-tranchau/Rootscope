@@ -565,40 +565,45 @@ def iterative_predict(model, df_base, adjacency, feature_cols, scaler, le,
     return best_df, best_pred_names, best_proba
 
 
-def predict_single_tif(tif_path, models_dict, scalers, feature_cols, le,
-                        um_per_px=1.0, gpu=True, out_dir="predictions",
-                        max_rounds=10, cnn_weights=None, label_cells=False):
-    """
-    Full pipeline: segment -> features -> iterative predict -> overlay.
-    """
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    stem = Path(tif_path).stem.replace(".aivia", "")
-
-    print(f"\n  Processing: {tif_path}")
-
-    # Load TIF
+def load_image(tif_path):
+    """Read a TIFF and return it as an RGB uint8 array (z-stacks max-projected)."""
     img_raw = imread(str(tif_path))
-    img_rgb = ensure_rgb_uint8(img_raw, stack_mode="max")
-    print(f"    Image shape: {img_rgb.shape}")
+    return ensure_rgb_uint8(img_raw, stack_mode="max")
 
-    # Segment
-    print("    Segmenting (Cellpose-SAM)...")
-    masks = segment_cellpose_sam(img_rgb, use_gpu=gpu)
-    n_cells = int(masks.max())
-    print(f"    {n_cells} cells found")
 
-    if n_cells == 0:
-        print("    No cells found, skipping.")
-        return None
+# ═══════════════════════════════════════════════════════════════
+# PIPELINE STAGES
+#
+# predict_single_tif() below runs these in order. They are also exposed
+# separately so a caller that pays for GPU time by the second (a web app on
+# ZeroGPU, say) can wrap only stage_segment and stage_embed — the two steps
+# that actually touch the GPU — and run the rest on CPU.
+# ═══════════════════════════════════════════════════════════════
 
-    # BFS layer index
-    print("    Computing layer index...")
+def stage_segment(img_rgb, gpu=True, cellpose_model=None):
+    """GPU stage 1 — Cellpose-SAM. Returns the int32 label mask."""
+    return segment_cellpose_sam(img_rgb, use_gpu=gpu, model=cellpose_model)
+
+
+def stage_features(masks, img_rgb, um_per_px=1.0, verbose=True):
+    """CPU stage — tissue mask, layer index, debris removal, handcrafted
+    features.
+
+    Debris removal edits ``masks`` in place, so the (possibly modified) mask is
+    returned alongside the feature table.
+
+    Returns ``(masks, df_base, layer_lookup, adjacency, n_layers)``, or
+    ``(masks, None, ...)`` if every cell was debris.
+    """
+    if verbose:
+        print("    Computing layer index...")
     tissue = build_tissue_mask(masks)
     layer_lookup, n_layers, adjacency = compute_layer_index_edt(masks, tissue)
-    print(f"    {n_layers} layers")
+    if verbose:
+        print(f"    {n_layers} layers")
 
     # Filter out debris cells outside the main tissue body
+    n_cells = int(masks.max())
     debris_cells = set()
     for cid in range(1, n_cells + 1):
         cell_px = masks == cid
@@ -609,28 +614,54 @@ def predict_single_tif(tif_path, models_dict, scalers, feature_cols, le,
         if n_in_tissue / n_total < 0.5:
             debris_cells.add(cid)
     if debris_cells:
-        print(f"    Removed {len(debris_cells)} debris cells outside tissue")
+        if verbose:
+            print(f"    Removed {len(debris_cells)} debris cells outside tissue")
         for cid in debris_cells:
             masks[masks == cid] = 0
             layer_lookup.pop(cid, None)
         n_cells = int(masks.max())
 
-    # Extract base features (without neighbor cell types)
-    print("    Extracting features...")
+    if n_cells == 0:
+        return masks, None, layer_lookup, adjacency, n_layers
+
+    if verbose:
+        print("    Extracting features...")
     df_base = extract_all_features(masks, img_rgb, um_per_px, layer_lookup,
                                    adjacency, tissue_mask=tissue)
     df_base["n_layers_total"] = n_layers
+    return masks, df_base, layer_lookup, adjacency, n_layers
 
-    # Extract CNN embeddings
-    print("    Extracting CNN embeddings...")
+
+def stage_embed(masks, img_rgb, df_base, gpu=True, cnn_weights=None,
+                dinov2_model=None, verbose=True):
+    """GPU stage 2 — fine-tuned DINOv2 per-cell embeddings, merged into
+    ``df_base``. Returns the merged table (unchanged if embeddings are
+    unavailable)."""
+    if verbose:
+        print("    Extracting CNN embeddings...")
     cnn_df = extract_cnn_embedding_features(masks, img_rgb, use_gpu=gpu,
-                                             weights_path=cnn_weights)
+                                             weights_path=cnn_weights,
+                                             model=dinov2_model)
     if cnn_df is not None:
         df_base = df_base.merge(cnn_df, on="cell_id", how="left")
         emb_cols = [c for c in df_base.columns if c.startswith("cnn_emb_")]
         df_base[emb_cols] = df_base[emb_cols].fillna(0.0)
+    return df_base
 
-    # -- Run each model with iterative prediction --
+
+def stage_classify(df_base, masks, img_rgb, layer_lookup, adjacency,
+                   models_dict, scalers, feature_cols, le,
+                   out_dir="predictions", stem="image", source_name=None,
+                   um_per_px=1.0, max_rounds=10, label_cells=False):
+    """CPU stage — iterative prediction with each model plus the weighted
+    ensemble, anatomical post-processing, and per-model CSV + overlay PNG.
+
+    Returns the concatenated per-cell table across all models."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if source_name is None:
+        source_name = f"{stem}.tif"
+
     all_dfs = []
     model_probas = {}  # model_name -> (cell_ids, y_proba)
     for model_name, model in models_dict.items():
@@ -645,7 +676,7 @@ def predict_single_tif(tif_path, models_dict, scalers, feature_cols, le,
         pred_conf = y_proba.max(axis=1)
         df["predicted_cell_type"] = pred_names
         df["prediction_confidence"] = np.round(pred_conf, 4)
-        df["source_file"] = Path(tif_path).name
+        df["source_file"] = source_name
         df["um_per_px"] = um_per_px
         df["model"] = model_name
 
@@ -754,7 +785,7 @@ def predict_single_tif(tif_path, models_dict, scalers, feature_cols, le,
         df_ens = df_base.copy()
         df_ens["predicted_cell_type"] = ens_pred_names
         df_ens["prediction_confidence"] = np.round(ens_conf, 4)
-        df_ens["source_file"] = Path(tif_path).name
+        df_ens["source_file"] = source_name
         df_ens["um_per_px"] = um_per_px
         df_ens["model"] = "Ensemble"
 
@@ -795,6 +826,52 @@ def predict_single_tif(tif_path, models_dict, scalers, feature_cols, le,
         all_dfs.append(df_ens)
 
     return pd.concat(all_dfs, ignore_index=True)
+
+
+def predict_single_tif(tif_path, models_dict, scalers, feature_cols, le,
+                        um_per_px=1.0, gpu=True, out_dir="predictions",
+                        max_rounds=10, cnn_weights=None, label_cells=False,
+                        cellpose_model=None, dinov2_model=None):
+    """
+    Full pipeline: segment -> features -> iterative predict -> overlay.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stem = Path(tif_path).stem.replace(".aivia", "")
+
+    print(f"\n  Processing: {tif_path}")
+
+    # Load TIF
+    img_rgb = load_image(tif_path)
+    print(f"    Image shape: {img_rgb.shape}")
+
+    # Segment
+    print("    Segmenting (Cellpose-SAM)...")
+    masks = stage_segment(img_rgb, gpu=gpu, cellpose_model=cellpose_model)
+    n_cells = int(masks.max())
+    print(f"    {n_cells} cells found")
+
+    if n_cells == 0:
+        print("    No cells found, skipping.")
+        return None
+
+    # BFS layer index, debris removal, handcrafted features
+    masks, df_base, layer_lookup, adjacency, n_layers = stage_features(
+        masks, img_rgb, um_per_px=um_per_px)
+    if df_base is None:
+        print("    No cells left after debris removal, skipping.")
+        return None
+
+    # CNN embeddings
+    df_base = stage_embed(masks, img_rgb, df_base, gpu=gpu,
+                          cnn_weights=cnn_weights, dinov2_model=dinov2_model)
+
+    return stage_classify(
+        df_base, masks, img_rgb, layer_lookup, adjacency,
+        models_dict, scalers, feature_cols, le,
+        out_dir=out_dir, stem=stem, source_name=Path(tif_path).name,
+        um_per_px=um_per_px, max_rounds=max_rounds, label_cells=label_cells,
+    )
 
 
 def main():

@@ -21,6 +21,10 @@ Note: the Cellpose-SAM segmentation weights are NOT handled here — the
 ``cellpose`` library downloads and caches those itself on first use.
 """
 
+# `X | None` annotations below need this on Python 3.9,
+# which pyproject still declares as the supported floor.
+from __future__ import annotations
+
 import os
 import sys
 import urllib.request

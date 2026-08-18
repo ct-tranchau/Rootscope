@@ -170,10 +170,18 @@ def get_pairs(df, species=None, stage=None):
 # CELLPOSE-SAM SEGMENTATION
 # ═══════════════════════════════════════════════════════════════
 
+def load_cellpose_model(use_gpu=True):
+    """Build the Cellpose-SAM model. Expensive (downloads/loads weights), so
+    long-running callers such as a web server should build it once and pass it
+    to ``segment_cellpose_sam(model=...)``."""
+    return models.CellposeModel(gpu=use_gpu, pretrained_model="cpsam")
+
+
 def segment_cellpose_sam(img_rgb_uint8, use_gpu=True, diameter=None,
                           cellprob_threshold=0.0, flow_threshold=0.4,
-                          min_size=30):
-    model = models.CellposeModel(gpu=use_gpu, pretrained_model="cpsam")
+                          min_size=30, model=None):
+    if model is None:
+        model = load_cellpose_model(use_gpu=use_gpu)
     masks, _, _ = model.eval(
         img_rgb_uint8,
         channels=[0, 0],
@@ -1242,7 +1250,8 @@ def compute_neighbor_celltypes(df, adjacency, cell_type_labels=None,
     return df
 
 
-def extract_cnn_embedding_features(masks, img_rgb, use_gpu=True, weights_path=None):
+def extract_cnn_embedding_features(masks, img_rgb, use_gpu=True, weights_path=None,
+                                    model=None):
     """
     Extract DINOv2 CNN embeddings for all cells. Returns a DataFrame
     with cell_id and cnn_emb_* columns, or None if not available.
@@ -1254,7 +1263,7 @@ def extract_cnn_embedding_features(masks, img_rgb, use_gpu=True, weights_path=No
     try:
         from .cnn_embeddings import extract_cnn_embeddings
         return extract_cnn_embeddings(masks, img_rgb, use_gpu=use_gpu,
-                                      weights_path=weights_path)
+                                      weights_path=weights_path, model=model)
     except ImportError:
         import warnings
         warnings.warn("cnn_embeddings module not found — skipping CNN features.")
