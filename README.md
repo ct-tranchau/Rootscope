@@ -6,22 +6,40 @@ No install needed: [![Open In Colab](https://colab.research.google.com/assets/co
 
 ## Install
 
-Needs Python 3.10+.
+Needs Python 3.10-3.12. Clone the repo first:
 
 ```bash
 git clone https://github.com/ct-tranchau/Rootscope.git
 cd Rootscope
+```
+
+### With conda (recommended)
+
+GPU:
+
+```bash
+conda env create -f environment.yml
+conda activate rootscope
 pip install .
 ```
 
-For a clean conda environment instead: `conda env create -f environment.yml && conda activate rootscope && pip install .`
-(use `environment-cpu.yml` on macOS or without an NVIDIA GPU). To reproduce the exact
-validated versions, `pip install -r requirements.txt` first.
+CPU:
 
-Works on Linux/Windows with an NVIDIA GPU (~2 min per image) and on CPU or Apple
-Silicon (15-30 min). macOS Intel is unsupported. The first run downloads the
-trained weights (~460 MB) from the
-[Hub](https://huggingface.co/ct-tranchau/Rootscope) into `~/.cache/huggingface`.
+```bash
+conda env create -f environment-cpu.yml
+conda activate rootscope
+pip install .
+```
+
+### With pip
+
+```bash
+pip install -r requirements.txt
+pip install .
+```
+
+`requirements.txt` pins the validated versions. For a specific CUDA build,
+install torch from [pytorch.org](https://pytorch.org/get-started/locally/) first.
 
 ## Predict
 
@@ -64,6 +82,21 @@ id, centroid, features, predicted `cell_type`) and `<image>_<Model>_overlay.png`
 
 Each round fills in every cell's neighbor cell-types from the previous round and
 re-predicts, until the predictions stop changing.
+
+## Speed and hardware
+
+| Machine | Time per image |
+|---------|----------------|
+| NVIDIA GPU (Linux/Windows) | ~2 min |
+| CPU or Apple Silicon | 15-30 min |
+| macOS Intel | not supported - use Colab or the web app |
+
+## Model weights
+
+Nothing to download by hand. The first prediction fetches the trained weights
+(~460 MB) from [Hugging Face](https://huggingface.co/ct-tranchau/Rootscope) into
+`~/.cache/huggingface`, so the first run needs internet; later runs start
+instantly.
 
 ## More
 
