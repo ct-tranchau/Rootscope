@@ -55,6 +55,11 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--cpu", dest="gpu", action="store_false",
                    help="Force CPU (slow).")
 
+    p.add_argument("--model-version", choices=("v1", "v2"), default=None,
+                   help="Which published model to use. v2 (default): 864 "
+                        "features, fine-tuned DINOv2 ViT-B/14, the model "
+                        "evaluated in the manuscript. v1: 480 features, "
+                        "DINOv2 ViT-S/14, the earlier release.")
     p.add_argument("--model-dir", default=None,
                    help="Folder with trained model weights (default: "
                         "auto-download/cache).")
@@ -69,7 +74,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None):
+    import os as _os
     args = build_parser().parse_args(argv)
+    # set before anything resolves weights, so the classifiers and the backbone
+    # are taken from the same version's folder
+    if args.model_version:
+        _os.environ["ROOTSCOPE_MODEL_VERSION"] = args.model_version
     use_gpu = _gpu_available() if args.gpu is None else args.gpu
     if args.gpu is None:
         print(f"[rootscope] GPU {'detected' if use_gpu else 'not found (using CPU)'}.")

@@ -36,6 +36,32 @@ from pathlib import Path
 # ─────────────────────────────────────────────────────────────────────────────
 DEFAULT_HF_REPO = "ct-tranchau/Rootscope"
 
+# Two published model versions live in one Hub repo:
+#   v2 -> repo root      96 morphometric + 768 DINOv2 ViT-B/14  = 864 features
+#   v1 -> "v1/" folder   96 morphometric + 384 DINOv2 ViT-S/14  = 480 features
+# v2 is the default: it is the model evaluated in the manuscript and the one the
+# hosted demo runs. Its backbone is heavier, but on a GPU the embedding stage is
+# a few seconds either way -- end to end the two versions measured within 2% of
+# each other, because Cellpose segmentation dominates and is identical.
+# v1 is kept for reproducing earlier results. Select with --model-version or
+# ROOTSCOPE_MODEL_VERSION.
+MODEL_VERSIONS = ("v1", "v2")
+DEFAULT_MODEL_VERSION = "v2"
+
+
+def model_version() -> str:
+    v = os.environ.get("ROOTSCOPE_MODEL_VERSION", DEFAULT_MODEL_VERSION).lower()
+    if v not in MODEL_VERSIONS:
+        raise ValueError(
+            f"ROOTSCOPE_MODEL_VERSION must be one of {MODEL_VERSIONS}, got '{v}'."
+        )
+    return v
+
+
+def _hf_prefix() -> str:
+    """Subfolder inside the Hub repo holding the selected version's weights."""
+    return "" if model_version() == "v2" else f"{model_version()}/"
+
 # Optional escape hatch: a plain base URL under which each file name below is
 # directly downloadable, e.g. "https://zenodo.org/records/XXXXXXX/files".
 # Only used if the environment variable ROOTSCOPE_MODELS_URL is set.
@@ -182,9 +208,14 @@ def resolve_model_dir(user_arg: str | None = None) -> Path:
     repo = _hf_repo()
     if repo:
         print(f"[rootscope] Fetching model weights from Hugging Face '{repo}' (first run only)...")
-        snap = _hf_snapshot(repo, ["*.joblib"])
-        if snap is not None and _has_required_models(snap):
-            return snap
+        pref = _hf_prefix()
+        # Name the files rather than globbing: "*.joblib" also matches
+        # "v1/*.joblib", which would drag the other version's weights down too.
+        snap = _hf_snapshot(
+            repo, [f"{pref}{f}" for f in MODEL_FILES_REQUIRED + MODEL_FILES_OPTIONAL]
+        )
+        if snap is not None and _has_required_models(snap / pref if pref else snap):
+            return snap / pref if pref else snap
 
     # 6. plain base URL, if configured
     base_url = _models_base_url()
@@ -229,9 +260,12 @@ def resolve_cnn_weights(user_arg: str | None = None) -> Path | None:
 
     repo = _hf_repo()
     if repo:
-        snap = _hf_snapshot(repo, [CNN_WEIGHTS_FILE])
-        if snap is not None and (snap / CNN_WEIGHTS_FILE).exists():
-            return snap / CNN_WEIGHTS_FILE
+        pref = _hf_prefix()
+        # meta.json travels with the backbone: without it cnn_embeddings falls
+        # back to ViT-S/14 and silently produces the wrong embedding width.
+        snap = _hf_snapshot(repo, [f"{pref}{CNN_WEIGHTS_FILE}", f"{pref}meta.json"])
+        if snap is not None and (snap / pref / CNN_WEIGHTS_FILE).exists():
+            return snap / pref / CNN_WEIGHTS_FILE
 
     base_url = _models_base_url()
     if base_url:

@@ -58,6 +58,7 @@ df = predict_tif("my_image.tif", out_dir="results/", gpu=True)   # one row per c
 | `--cpu` / `--gpu` | force CPU or GPU (default: auto-detect) |
 | `--um-per-px 0.5` | microns per pixel of your image (default 1.0) |
 | `--label-cells` | write the cell-type name inside each cell (off by default: the text hides dense sections) |
+| `--model-version v1` | use the earlier 480-feature model (default: v2) |
 | `--model-dir DIR` | use your own trained weights instead of the download |
 | `--cnn-weights backbone.pt` | use your own fine-tuned DINOv2 backbone |
 | `--max-rounds N` | iterative-refinement rounds (default 10) |
@@ -107,11 +108,19 @@ instantly.
   published model (features → DINOv2 fine-tuning → training → prediction). See
   [`pipeline/README.md`](pipeline/README.md).
 - **Model weights** - hosted on the
-  [Hub](https://huggingface.co/ct-tranchau/Rootscope): RandomForest (~350 MB),
-  LightGBM (~29 MB, best single model), XGBoost (~14 MB), the fine-tuned DINOv2
-  `backbone.pt` (~85 MB), plus feature names and label encoder. Point elsewhere
-  with `--model-dir` / `--cnn-weights`, or `ROOTSCOPE_MODEL_DIR`,
-  `ROOTSCOPE_CNN_WEIGHTS`, `ROOTSCOPE_HF_REPO`, `ROOTSCOPE_MODELS_URL`.
+  [Hub](https://huggingface.co/ct-tranchau/Rootscope), downloaded on first use.
+  Two versions are published:
+
+  | | features | backbone | on the Hub |
+  |---|---|---|---|
+  | **v2** (default) | 864 = 96 morphometric + 768 embeddings | fine-tuned DINOv2 ViT-B/14 | repo root |
+  | v1 | 480 = 96 morphometric + 384 embeddings | fine-tuned DINOv2 ViT-S/14 | `v1/` folder |
+
+  v2 is the model evaluated in the manuscript and the one the hosted demo runs.
+  Select the other with `--model-version v1` or `ROOTSCOPE_MODEL_VERSION=v1`.
+  Point somewhere else entirely with `--model-dir` / `--cnn-weights`, or
+  `ROOTSCOPE_MODEL_DIR`, `ROOTSCOPE_CNN_WEIGHTS`, `ROOTSCOPE_HF_REPO`,
+  `ROOTSCOPE_MODELS_URL`.
 
 ## Contact
 

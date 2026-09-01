@@ -17,7 +17,7 @@ pipeline_tag: image-classification
 Trained model weights for **[RootScope](https://github.com/ct-tranchau/Rootscope)**.
 
 RootScope takes a raw confocal root-tip cross-section TIFF, segments every cell
-with **Cellpose-SAM**, describes each cell with hand-crafted morpho-topological
+with **Cellpose-SAM**, describes each cell with morpho-topological
 features plus fine-tuned **DINOv2** embeddings, and classifies it into one of
 nine anatomical cell types using an iterative tree-based ensemble.
 
@@ -64,13 +64,16 @@ df = predict_tif("my_image.tif", out_dir="results/")
 
 ## Performance
 
-Held-out test accuracy, 480 features, 9 classes:
+Held-out test accuracy, 864 features, 9 classes (v2):
 
-| Model | Test |
-|-------|------|
-| LightGBM | **0.965** |
-| XGBoost | 0.959 |
-| RandomForest | 0.937 |
+| Model | Test | 95% CI |
+|-------|------|--------|
+| XGBoost | **0.861** | 0.828 - 0.895 |
+| LightGBM | 0.858 | 0.823 - 0.895 |
+| RandomForest | 0.832 | 0.798 - 0.869 |
+
+Figures for v1 are not reported here: they were measured before the
+neighbour-label leak was corrected and are not comparable.
 
 Inference: ~1.5-3 min per image on a single GPU.
 
