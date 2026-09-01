@@ -68,22 +68,6 @@ id, centroid, features, predicted `cell_type`) and `<image>_<Model>_overlay.png`
 (cells colored by type). Batch mode also writes `all_predictions.csv`. See
 [`examples/README.md`](examples/README.md).
 
-## How it works
-
-```
- raw TIFF
-    ▼  Cellpose-SAM               segment every cell
-    ▼  layer index + adjacency    position within the root-tip tissue
-    ▼  shape/size/intensity       handcrafted per-cell features
-    ▼  DINOv2 embeddings          fine-tuned deep features per cell crop
-    ▼  iterative ensemble         RandomForest + XGBoost + LightGBM,
-                                  refining neighbor-context each round
- per-cell cell-type predictions  +  labeled overlay
-```
-
-Each round fills in every cell's neighbor cell-types from the previous round and
-re-predicts, until the predictions stop changing.
-
 ## Speed and hardware
 
 | Machine | Time per image |
@@ -101,12 +85,8 @@ instantly.
 
 ## More
 
-- **Web app** - `webapp/` is a Gradio front end for Hugging Face Spaces with
-  ZeroGPU. Run locally with `pip install gradio && python webapp/app.py`; see
-  [`webapp/README.md`](webapp/README.md) to deploy.
-- **Retraining** - `pipeline/` holds the numbered research workflow behind the
-  published model (features → DINOv2 fine-tuning → training → prediction). See
-  [`pipeline/README.md`](pipeline/README.md).
+- **Web app** - try it in the browser at
+  [huggingface.co/spaces/ct-tranchau/Rootscope](https://huggingface.co/spaces/ct-tranchau/Rootscope).
 - **Model weights** - hosted on the
   [Hub](https://huggingface.co/ct-tranchau/Rootscope), downloaded on first use.
   Two versions are published:
@@ -115,12 +95,6 @@ instantly.
   |---|---|---|---|
   | **v2** (default) | 864 = 96 morphometric + 768 embeddings | fine-tuned DINOv2 ViT-B/14 | repo root |
   | v1 | 480 = 96 morphometric + 384 embeddings | fine-tuned DINOv2 ViT-S/14 | `v1/` folder |
-
-  v2 is the model evaluated in the manuscript and the one the hosted demo runs.
-  Select the other with `--model-version v1` or `ROOTSCOPE_MODEL_VERSION=v1`.
-  Point somewhere else entirely with `--model-dir` / `--cnn-weights`, or
-  `ROOTSCOPE_MODEL_DIR`, `ROOTSCOPE_CNN_WEIGHTS`, `ROOTSCOPE_HF_REPO`,
-  `ROOTSCOPE_MODELS_URL`.
 
 ## Contact
 
