@@ -21,10 +21,12 @@ rootscope --tif my_image.tif --out results/
 rootscope --tif-dir my_tifs/ --out results/          # batch
 ```
 
-`results/` gets, per image, a per-cell CSV (`<stem>_LightGBM_predictions.csv`)
-and a labeled overlay PNG. The CSV carries the label, its confidence, the nine
-class probabilities, and the round-1 label so the effect of refinement is
-visible per cell.
+`results/` gets, per image, a per-cell CSV (`<stem>_LightGBM_predictions.csv`),
+a labeled overlay PNG, and a short report (`<stem>_LightGBM_report.txt`, also as
+JSON) that says how far to trust the result: the share of cells in each
+confidence tier, the exodermis decision, and per-class counts. The CSV carries
+the label, its confidence, the nine class probabilities, and the round-1 label
+so the effect of refinement is visible per cell.
 
 Exodermis. Some species never form this layer. The classifier tends to draw a partial layer anyway. The package decides from the image and, if you give a species name, from the species table shipped with the package. When the layer is judged absent, the class is removed and each cell takes its next most likely type. 
 
@@ -45,7 +47,7 @@ df = predict_tif("pea.tif", out_dir="results/", species="Pisum sativum")
 ## Speed
 
 Cellpose-SAM and the DINOv2 embedding are the cost; classification is seconds.
-On one GPU an image is 1-3 minutes; on CPU expect 15 minutes or more. The web
+On one GPU an image is 1-3 minutes; on a multi-core CPU a few minutes. The web
 app loads both networks once per process, so a second image is faster than the
 first.
 
@@ -57,10 +59,12 @@ rootscope/
   predict.py             segment -> features -> embed -> classify stages
   classify_v4.py         the refinement loop, seed averaging, radial prior
   context.py             soft-neighbor + layer-distance features
-                         (copied verbatim from the research code, never retyped)
   extract_features.py    Cellpose-SAM + 96 morpho-topological features
   cnn_embeddings.py      fine-tuned DINOv2 ViT-B/14 embeddings
   radial_order.py        radial-order prior
+  layer_rules.py         exodermis decision and along-the-layer smoothing
+  species.py             species table (data/species_exodermis.csv)
+  report.py              the per-image trust report
   weights.py             finds / downloads the weights
 webapp/                  Gradio app for the Hugging Face Space
 pipeline/                feature-extraction and training scripts (the released
