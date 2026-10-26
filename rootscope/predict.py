@@ -585,9 +585,15 @@ def stage_segment(img_rgb, gpu=True, cellpose_model=None):
     return segment_cellpose_sam(img_rgb, use_gpu=gpu, model=cellpose_model)
 
 
-def stage_features(masks, img_rgb, um_per_px=1.0, verbose=True):
-    """CPU stage: tissue mask, layer index, debris removal, handcrafted
-    features.
+def stage_features(masks, img_rgb, um_per_px=1.0, verbose=True,
+                   remove_debris=True):
+    """CPU stage: tissue mask, layer index, (optional) debris removal,
+    handcrafted features.
+
+    ``remove_debris`` drops segmented objects that lie mostly outside the
+    tissue body. v1/v2 always did this. v4 passes False: the manuscript's
+    evaluation kept every Cellpose object, and the v4 package reproduces that
+    evaluation cell for cell only when the same cells are scored.
 
     Debris removal edits ``masks`` in place, so the (possibly modified) mask is
     returned alongside the feature table.
@@ -605,7 +611,7 @@ def stage_features(masks, img_rgb, um_per_px=1.0, verbose=True):
     # Filter out debris cells outside the main tissue body
     n_cells = int(masks.max())
     debris_cells = set()
-    for cid in range(1, n_cells + 1):
+    for cid in (range(1, n_cells + 1) if remove_debris else ()):
         cell_px = masks == cid
         n_total = cell_px.sum()
         if n_total == 0:
@@ -826,6 +832,157 @@ def stage_classify(df_base, masks, img_rgb, layer_lookup, adjacency,
         all_dfs.append(df_ens)
 
     return pd.concat(all_dfs, ignore_index=True)
+
+
+
+# ═══════════════════════════════════════════════════════════════
+# V4
+#
+# Same stage_segment / stage_features / stage_embed as above; only the
+# classifier differs. The v4 loop lives in classify_v4.py and the context
+# features it rebuilds every round in context.py (copied verbatim from the
+# research code). These wrappers exist so api.py, cli.py and the web app can
+# treat v4 like the other versions.
+# ═══════════════════════════════════════════════════════════════
+
+def default_rounds(user_value=None):
+    """The refinement-round cap each model version was evaluated with."""
+    if user_value is not None:
+        return int(user_value)
+    from .weights import is_v4
+    return 6 if is_v4() else 10
+
+
+def read_um_per_px(tif_path):
+    """Pixel size in microns from the TIFF's OME metadata, or None."""
+    import re
+    try:
+        import tifffile
+        with tifffile.TiffFile(str(tif_path)) as t:
+            ome = t.ome_metadata or ""
+    except Exception:  # noqa: BLE001
+        return None
+    m = re.search(r'PhysicalSizeX="([0-9.eE+-]+)"', ome)
+    if not m:
+        return None
+    v = float(m.group(1))
+    unit = re.search(r'PhysicalSizeXUnit="([^"]+)"', ome)
+    if unit and unit.group(1) not in ("µm", "um", "\u00b5m", "micron", "microns"):
+        print(f"    WARNING: PhysicalSizeXUnit is '{unit.group(1)}', assuming microns.")
+    return v
+
+
+def stage_classify_v4(df_base, masks, img_rgb, model_dir, out_dir="predictions",
+                      stem="image", source_name=None, um_per_px=1.0,
+                      max_rounds=6, seeds=None, label_cells=False, verbose=True,
+                      no_exodermis=None, smooth_layers=True, species=None):
+    """CPU stage, v4: per-round LightGBM x 3 seeds, soft-neighbor + layer
+    context rebuilt each round, radial-order prior, then the outer-layer rules
+    (``smooth_layers`` removes single cells of another class inside a layer;
+    the exodermis is kept or removed from the image evidence, the optional
+    ``species`` and the optional ``no_exodermis`` flag). Writes
+    ``<stem>_LightGBM_predictions.csv``, ``<stem>_LightGBM_overlay.png`` and
+    ``<stem>_LightGBM_report.json`` / ``.txt`` and returns the per-cell table.
+    ``predicted_cell_type`` is the final label; ``predicted_raw`` is the label
+    before the rules; ``prediction_confidence`` is the classifier's probability
+    of the final label; ``reliability`` maps it to high / medium / low with
+    the accuracy observed on the held-out sections (see report.py)."""
+    from sklearn.preprocessing import LabelEncoder
+    from .classify_v4 import CLASSES, classify
+    from . import report as _report
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if source_name is None:
+        source_name = f"{stem}.tif"
+
+    print(f"\n    --- LightGBM v4 (per-round models, max {max_rounds} rounds, "
+          f"{'all seeds' if seeds is None else seeds}) ---")
+    names, P, names_r1, raw, info = classify(
+        df_base, masks, source_file=source_name, model_dir=model_dir, seeds=seeds,
+        max_rounds=max_rounds, verbose=verbose, no_exodermis=no_exodermis,
+        smooth_layers=smooth_layers, species=species)
+
+    df = df_base.copy().reset_index(drop=True)
+    df["predicted_cell_type"] = names
+    idx = np.array([CLASSES.index(n) for n in names])
+    df["prediction_confidence"] = np.round(P[np.arange(len(P)), idx], 4)
+    df["reliability"] = [_report.reliability(c) for c in df["prediction_confidence"]]
+    df["predicted_raw"] = raw
+    df["layer_smoothed"] = names != raw
+    df["predicted_round1"] = names_r1
+    for i, c in enumerate(CLASSES):
+        df[f"p_{c}"] = P[:, i]
+    df["source_file"] = source_name
+    df["um_per_px"] = um_per_px
+    df["model"] = "LightGBM"
+
+    print("    Final predictions:")
+    for ct, cnt in pd.Series(names).value_counts().items():
+        print(f"      {ct}: {cnt}")
+    print(f"    Labels changed by refinement: {int((raw != names_r1).sum())} / {len(names)}")
+    print(f"    Labels changed by layer smoothing: {int((names != raw).sum())} / {len(names)}")
+
+    csv_path = out_dir / f"{stem}_LightGBM_predictions.csv"
+    df.to_csv(csv_path, index=False)
+    print(f"    Saved: {csv_path}")
+    rep = _report.build(df, info, species_row=info["species_row"],
+                        species_query=info["species_query"],
+                        n_smoothed=int((names != raw).sum()), um_per_px=um_per_px)
+    rep_path = out_dir / f"{stem}_LightGBM_report.json"
+    _report.write(rep, rep_path)
+    print("    Report:\n      " + _report.to_text(rep).replace("\n", "\n      "))
+    print(f"    Saved: {rep_path}")
+
+    le = LabelEncoder().fit(CLASSES)          # only classes_ is used by the overlay
+    cell_predictions = {int(c): str(n) for c, n in zip(df["cell_id"].values, names)}
+    overlay_path = out_dir / f"{stem}_LightGBM_overlay.png"
+    save_prediction_overlay(img_rgb, masks, cell_predictions, overlay_path, le,
+                            label_cells=label_cells)
+    print(f"    Saved: {overlay_path}")
+    return df
+
+
+def predict_single_tif_v4(tif_path, model_dir, um_per_px=None, gpu=True,
+                          out_dir="predictions", max_rounds=6, cnn_weights=None,
+                          label_cells=False, cellpose_model=None,
+                          dinov2_model=None, seeds=None, no_exodermis=None,
+                          smooth_layers=True, species=None):
+    """Full v4 pipeline: segment -> features (no debris filter) -> embed ->
+    v4 classify -> overlay."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stem = Path(tif_path).stem.replace(".aivia", "")
+    print(f"\n  Processing: {tif_path}")
+
+    if um_per_px is None:
+        um_per_px = read_um_per_px(tif_path)
+        if um_per_px is None:
+            raise ValueError(
+                f"{Path(tif_path).name}: no PhysicalSizeX in the OME metadata. "
+                f"Pass um_per_px (CLI: --um-per-px). RootScope will not assume 1.0: "
+                f"a wrong scale distorts every size feature.")
+        print(f"    Pixel size from OME metadata: {um_per_px} um/px")
+
+    img_rgb = load_image(tif_path)
+    print(f"    Image shape: {img_rgb.shape}")
+    print("    Segmenting (Cellpose-SAM)...")
+    masks = stage_segment(img_rgb, gpu=gpu, cellpose_model=cellpose_model)
+    n_cells = int(masks.max())
+    print(f"    {n_cells} cells found")
+    if n_cells == 0:
+        print("    No cells found, skipping.")
+        return None
+
+    masks, df_base, layer_lookup, adjacency, n_layers = stage_features(
+        masks, img_rgb, um_per_px=um_per_px, remove_debris=False)
+    df_base = stage_embed(masks, img_rgb, df_base, gpu=gpu,
+                          cnn_weights=cnn_weights, dinov2_model=dinov2_model)
+    return stage_classify_v4(
+        df_base, masks, img_rgb, model_dir=model_dir, out_dir=out_dir, stem=stem,
+        source_name=Path(tif_path).name, um_per_px=um_per_px,
+        max_rounds=max_rounds, seeds=seeds, label_cells=label_cells,
+        no_exodermis=no_exodermis, smooth_layers=smooth_layers, species=species)
 
 
 def predict_single_tif(tif_path, models_dict, scalers, feature_cols, le,

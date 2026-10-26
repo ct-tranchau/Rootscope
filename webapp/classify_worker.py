@@ -40,6 +40,29 @@ def run(job):
     # Imported here, not at module scope, so that even this process does no
     # model work until it has a job to do.
     from rootscope import predict as rs
+    from rootscope.weights import is_v4
+
+    if is_v4():
+        # v4: one LightGBM per round x 3 seeds, soft-neighbor + layer features
+        # rebuilt each round, radial-order prior at the end. No XGBoost anywhere,
+        # but the subprocess isolation is kept: it costs ~2 s and guards the
+        # parent's CUDA state against the same class of bug.
+        df = rs.stage_classify_v4(
+            job["df_base"], job["masks"], job["img_rgb"],
+            model_dir=job["model_dir"],
+            out_dir=job["out_dir"],
+            stem=job["stem"],
+            source_name=job["source_name"],
+            um_per_px=job["um_per_px"],
+            max_rounds=job["max_rounds"],
+            label_cells=job["label_cells"],
+            no_exodermis=job.get("no_exodermis", None),
+            smooth_layers=job.get("smooth_layers", True),
+            species=job.get("species", None),
+        )
+        from rootscope.classify_v4 import CLASSES
+        return {"ok": True, "df": df, "classes": list(CLASSES),
+                "models": ["LightGBM"]}
 
     models, scalers, feature_cols, le = rs.load_models(job["model_dir"])
     if not models:

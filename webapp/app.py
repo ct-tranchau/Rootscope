@@ -31,7 +31,7 @@ from PIL import Image
 from rootscope import predict as rs
 from rootscope.cnn_embeddings import load_dinov2
 from rootscope.extract_features import load_cellpose_model
-from rootscope.weights import resolve_cnn_weights, resolve_model_dir
+from rootscope.weights import is_v4, model_version, resolve_cnn_weights, resolve_model_dir
 
 # ── ZeroGPU shim ─────────────────────────────────────────────────────────────
 # `spaces` only exists on Hugging Face. Locally the decorator becomes a no-op
@@ -68,6 +68,8 @@ MAX_PIXELS = 40_000_000  # ~6300x6300; refuse anything larger
 # Settings → Variables and restart; no code change needed.
 SHOW_DIAGNOSTICS = os.environ.get("ROOTSCOPE_DIAGNOSTICS") == "1"
 MODEL_CHOICES = ["Ensemble", "RandomForest", "LightGBM", "XGBoost"]
+if is_v4():
+    MODEL_CHOICES = ["LightGBM"]   # v4 ships one classifier (3 seeds averaged inside)
 
 # ── fetch weights at startup, load nothing ───────────────────────────────────
 # Downloading here means the first visitor does not wait for ~550 MB. Note that
@@ -462,12 +464,15 @@ def _render(results, model_name):
         stats += (f" · xylem poles: {int(row['n_xylem_poles'])} · "
                   f"phloem poles: {int(row['n_phloem_poles'])}")
 
+    # The per-image trust report (*_report.txt) is not shown on the Space (Nina, 2026-10-08);
+    # the command-line package still writes it.
     return (str(overlay_path), summary, stats,
             gr.DownloadButton(value=str(csv_path), visible=True))
 
 
 def run_rootscope(tif_path, tif_file, um_per_px, which_model, label_cells,
-                  max_rounds, progress=gr.Progress()):
+                  max_rounds, species="", smooth_layers=True,
+                  progress=gr.Progress()):
     # tif_path comes from the State that on_upload fills; tif_file is whatever
     # the File component is holding right now. Either alone is fragile: the
     # State is empty if Run is pressed before on_upload finishes, and it is
@@ -504,7 +509,8 @@ def run_rootscope(tif_path, tif_file, um_per_px, which_model, label_cells,
     # ---- CPU: tissue layers + handcrafted features ----
     progress(0.35, desc=f"{n_cells} cells, layer index and features")
     masks, df_base, layer_lookup, adjacency, n_layers = rs.stage_features(
-        masks, img_rgb, um_per_px=float(um_per_px))
+        masks, img_rgb, um_per_px=float(um_per_px),
+        remove_debris=not is_v4())   # v4 keeps every cell, as in the manuscript
     if df_base is None:
         raise gr.Error("Every detected object was filtered out as debris "
                        "outside the tissue body.")
@@ -522,13 +528,14 @@ def run_rootscope(tif_path, tif_file, um_per_px, which_model, label_cells,
         stem=stem, source_name=Path(tif_path).name,
         um_per_px=float(um_per_px), max_rounds=int(max_rounds),
         label_cells=bool(label_cells),
+        species=(species or "").strip() or None, smooth_layers=bool(smooth_layers),
     )
 
     progress(0.95, desc="Packaging results")
     zip_path = workdir / f"{stem}_rootscope_results.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(workdir.iterdir()):
-            if f.suffix in (".png", ".csv"):
+            if f.suffix in (".png", ".csv") or (f.suffix == ".json" and not f.name.endswith("_report.json")):
                 z.write(f, arcname=f.name)
 
     available = [m for m in MODEL_CHOICES
@@ -613,20 +620,39 @@ with gr.Blocks(title=TITLE, **_blocks_kwargs) as demo:
                      "feature.",
             )
             model_pick = gr.Dropdown(
-                MODEL_CHOICES, value="Ensemble", label="Model to display",
-                info="All four are computed in one run; this only picks which "
-                     "one you see. Ensemble is the published result.",
+                MODEL_CHOICES, value=MODEL_CHOICES[0], label="Model to display",
+                info=("One LightGBM (three training seeds averaged inside); "
+                      "this is the published result." if is_v4() else
+                      "All four are computed in one run; this only picks which "
+                      "one you see. Ensemble is the published result."),
+            )
+            species = gr.Textbox(
+                label="Species (optional)", value="", visible=is_v4(),
+                placeholder="e.g. Pisum sativum",
+                info="Not required. If given, it is checked against the species "
+                     "table: for a training species it settles whether the root "
+                     "has an exodermis; otherwise the image decides.",
             )
             with gr.Accordion("Advanced", open=False):
+                smooth_layers = gr.Checkbox(
+                    label="Smooth along the outer layers", value=True,
+                    visible=is_v4(),
+                    info="A single cell whose neighbours on both sides along "
+                         "the layer agree on another type takes that type "
+                         "(epidermis, exodermis, cortex only).",
+                )
                 label_cells = gr.Checkbox(
                     label="Write cell-type names on the overlay", value=False,
                     info="Readable when zoomed into one region; on a dense "
                          "section the text overlaps and hides the image.",
                 )
                 max_rounds = gr.Slider(
-                    1, 20, value=10, step=1, label="Max refinement rounds",
-                    info="The classifier re-predicts using neighbours' types "
-                         "until predictions stop changing.",
+                    1, 20, value=(6 if is_v4() else 10), step=1,
+                    label="Max refinement rounds",
+                    info=("Evaluated at 6; going to 10 changes accuracy "
+                          "by under 0.1 pp." if is_v4() else
+                          "The classifier re-predicts using neighbours' types "
+                          "until predictions stop changing."),
                 )
             run_btn = gr.Button("Run RootScope", variant="primary")
             # Hugging Face meters free GPU per visitor, not per Space, so the
@@ -684,7 +710,8 @@ with gr.Blocks(title=TITLE, **_blocks_kwargs) as demo:
                       [input_image, um_per_px, status, tif_state])
     run_btn.click(
         run_rootscope,
-        [tif_state, tif_upload, um_per_px, model_pick, label_cells, max_rounds],
+        [tif_state, tif_upload, um_per_px, model_pick, label_cells, max_rounds,
+         species, smooth_layers],
         [overlay, summary, stats_md, csv_btn, zip_btn, model_pick, results_state],
     )
     model_pick.change(switch_model, [results_state, model_pick],

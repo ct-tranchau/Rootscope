@@ -37,7 +37,7 @@ from pathlib import Path
 DEFAULT_HF_REPO = "ct-tranchau/Rootscope"
 
 # Two published model versions live in one Hub repo:
-#   v2 -> repo root      96 morphometric + 768 DINOv2 ViT-B/14  = 864 features
+#   v2 -> "v2/" folder   96 morphometric + 768 DINOv2 ViT-B/14  = 864 features
 #   v1 -> "v1/" folder   96 morphometric + 384 DINOv2 ViT-S/14  = 480 features
 # v2 is the default: it is the model evaluated in the manuscript and the one the
 # hosted demo runs. Its backbone is heavier, but on a GPU the embedding stage is
@@ -45,8 +45,15 @@ DEFAULT_HF_REPO = "ct-tranchau/Rootscope"
 # each other, because Cellpose segmentation dominates and is identical.
 # v1 is kept for reproducing earlier results. Select with --model-version or
 # ROOTSCOPE_MODEL_VERSION.
-MODEL_VERSIONS = ("v1", "v2")
-DEFAULT_MODEL_VERSION = "v2"
+# v4 -> "v4/" folder   96 morphometric + 768 DINOv2 ViT-B/14, PLUS 51 columns the
+#                      classifier rebuilds every refinement round (36 soft-neighbor
+#                      probabilities, 6 agreement flags, 9 layer-distance features),
+#                      = 915 features; one LightGBM per round, 3 seeds averaged,
+#                      radial-order prior after the last round. This is the model
+#                      in the manuscript (0.881 accuracy, 0.852 macro-F1 on the
+#                      clean 26-section split). Default since 4.0.0.
+MODEL_VERSIONS = ("v1", "v2", "v4")
+DEFAULT_MODEL_VERSION = "v4"
 
 
 def model_version() -> str:
@@ -59,8 +66,14 @@ def model_version() -> str:
 
 
 def _hf_prefix() -> str:
-    """Subfolder inside the Hub repo holding the selected version's weights."""
-    return "" if model_version() == "v2" else f"{model_version()}/"
+    """Subfolder inside the Hub repo holding the selected version's weights.
+    Every version has a folder named after it (v1/, v2/, v4/); the repo root
+    holds only the model card. v2 lived at the root until 2026-09-21."""
+    return f"{model_version()}/"
+
+
+def is_v4() -> bool:
+    return model_version() == "v4"
 
 # Optional escape hatch: a plain base URL under which each file name below is
 # directly downloadable, e.g. "https://zenodo.org/records/XXXXXXX/files".
@@ -90,6 +103,24 @@ MODEL_FILES_OPTIONAL = [
 ]
 CNN_WEIGHTS_FILE = "backbone.pt"
 
+# v4 artifacts. One LightGBM bundle per training seed; each holds the per-round
+# models, the scaler, the 915 feature names and the class order. Seed 42 alone
+# gives a working predictor; all three reproduce the manuscript's 3-seed average.
+# v4.1 adds the geometry-only bundles (lgbm_geom_s*), averaged with the full
+# model on the outer layers; seed 42 of those is required so that the published
+# model is the validated one (without it classify_v4 falls back to v4.0).
+V4_MODEL_FILES_REQUIRED = ["lgbm_s42.joblib", "lgbm_geom_s42.joblib"]
+V4_MODEL_FILES_OPTIONAL = ["lgbm_s1.joblib", "lgbm_s7.joblib",
+                           "lgbm_geom_s1.joblib", "lgbm_geom_s7.joblib"]
+
+
+def _required_files():
+    return V4_MODEL_FILES_REQUIRED if is_v4() else MODEL_FILES_REQUIRED
+
+
+def _optional_files():
+    return V4_MODEL_FILES_OPTIONAL if is_v4() else MODEL_FILES_OPTIONAL
+
 
 def _cache_dir() -> Path:
     root = os.environ.get("ROOTSCOPE_CACHE")
@@ -110,7 +141,7 @@ def _models_base_url() -> str:
 
 
 def _has_required_models(d: Path) -> bool:
-    return d.is_dir() and all((d / f).exists() for f in MODEL_FILES_REQUIRED)
+    return d.is_dir() and all((d / f).exists() for f in _required_files())
 
 
 # ── Hugging Face Hub ─────────────────────────────────────────────────────────
@@ -185,7 +216,7 @@ def resolve_model_dir(user_arg: str | None = None) -> Path:
         if not _has_required_models(d):
             raise FileNotFoundError(
                 f"--model-dir '{d}' does not contain the required model files "
-                f"({', '.join(MODEL_FILES_REQUIRED)})."
+                f"for model version {model_version()} ({', '.join(_required_files())})."
             )
         return d
 
@@ -212,7 +243,7 @@ def resolve_model_dir(user_arg: str | None = None) -> Path:
         # Name the files rather than globbing: "*.joblib" also matches
         # "v1/*.joblib", which would drag the other version's weights down too.
         snap = _hf_snapshot(
-            repo, [f"{pref}{f}" for f in MODEL_FILES_REQUIRED + MODEL_FILES_OPTIONAL]
+            repo, [f"{pref}{f}" for f in _required_files() + _optional_files()]
         )
         if snap is not None and _has_required_models(snap / pref if pref else snap):
             return snap / pref if pref else snap
@@ -221,8 +252,8 @@ def resolve_model_dir(user_arg: str | None = None) -> Path:
     base_url = _models_base_url()
     if base_url:
         print(f"[rootscope] Fetching model weights into {cache} (first run only)...")
-        _download_set(base_url, MODEL_FILES_REQUIRED, cache, skip_missing=False)
-        _download_set(base_url, MODEL_FILES_OPTIONAL, cache, skip_missing=True)
+        _download_set(base_url, _required_files(), cache, skip_missing=False)
+        _download_set(base_url, _optional_files(), cache, skip_missing=True)
         return cache
 
     raise RuntimeError(
@@ -233,7 +264,7 @@ def resolve_model_dir(user_arg: str | None = None) -> Path:
         "  • Put the model files in a folder and pass --model-dir <folder>, or\n"
         "  • export ROOTSCOPE_MODEL_DIR=/path/to/models, or\n"
         "  • export ROOTSCOPE_MODELS_URL=<base url> to self-host them.\n"
-        f"Required files: {', '.join(MODEL_FILES_REQUIRED)}"
+        f"Required files ({model_version()}): {', '.join(_required_files())}"
     )
 
 

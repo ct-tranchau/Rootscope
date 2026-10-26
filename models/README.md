@@ -1,61 +1,31 @@
-# Model weights
+# Model weights (V4)
 
-The trained weights are **not** stored in this Git repository; they are too
-large for GitHub (the RandomForest model alone is ~350 MB). They live on the
-Hugging Face Hub at
-**[ct-tranchau/Rootscope](https://huggingface.co/ct-tranchau/Rootscope)**, and
-Rootscope downloads them automatically on first use, caching them in
-`~/.cache/huggingface`. Downloads resume if interrupted.
+Shipped in this folder so prediction works offline. On the Hugging Face model
+repo `ct-tranchau/Rootscope` the same files live under `v4/`.
 
-## Files
+| file | size | what |
+|---|---|---|
+| `backbone.pt` | 346 MB | DINOv2 ViT-B/14, all 12 blocks fine-tuned on cell crops |
+| `meta.json` | tiny | architecture + hub name; `cnn_embeddings.py` reads it, **keep it beside `backbone.pt`** |
+| `lgbm_s42.joblib` | ~170 MB | LightGBM bundle, seed 42: `round_models` (six `(model, scaler)` pairs, one per refinement round), `fcols` (915 names, in model order), `classes` (9, in model order) |
+| `lgbm_s1.joblib`, `lgbm_s7.joblib` | ~170 MB each | seeds 1 and 7. Optional: seed 42 alone predicts; all three reproduce the manuscript's 3-seed average |
+| `lgbm_geom_s42.joblib`, `lgbm_geom_s1.joblib`, `lgbm_geom_s7.joblib` | ~180 MB each | geometry-only bundles (v4.1): same six-round structure, `fcols` = 68 shape / position / neighbourhood columns + the 51 context columns, no intensity and no embedding columns. `classify_v4.classify(geometry=True)` averages their probabilities with the full model's on every cell the full model places in the outer layers (cortex, epidermis, exodermis, root cap), so those layers are decided mostly by geometry and do not depend on the stain. Trained on the same 100 sections with the same script as the full bundles. Held-out: 0.880 -> 0.885, exodermis precision 0.82 -> 0.90. Without these files the package silently falls back to the v4.0 behaviour |
 
-| File | ~Size | Required? |
-|------|-------|-----------|
-| `feature_columns.joblib` | tiny | yes |
-| `label_encoder.joblib` | tiny | yes |
-| `model_XGBoost.joblib` | ~14 MB | yes |
-| `feature_scaler_XGBoost.joblib` | tiny | yes |
-| `model_LightGBM.joblib` | ~29 MB | yes |
-| `feature_scaler_LightGBM.joblib` | tiny | yes |
-| `model_RandomForest.joblib` | ~350 MB | yes (published) |
-| `feature_scaler_RandomForest.joblib` | tiny | yes (published) |
-| `backbone.pt` (fine-tuned DINOv2) | ~88 MB | strongly recommended |
+915 = 96 morphometric + 768 embedding + 51 context columns that `context.py`
+rebuilds every refinement round from the previous round's predictions
+(36 `nbp_*` neighbour probabilities, 6 `agree_*` flags, 9 layer-distance
+columns). Those 51 are **never read from a feature table**; a bundle whose
+`fcols` lists them is only valid together with the loop in `classify_v4.py`.
 
-All three models are part of the published ensemble. RandomForest matters beyond
-being a third vote: the ensemble double-weights it wherever it predicts a
-minority class (the RF-trust rule in `predict.py`), and it is the only bagging
-model of the three, so it decorrelates from XGBoost and LightGBM, which tend to
-agree with each other.
+## Not committed to git
 
-Prediction still runs if `model_RandomForest.joblib` is missing, falling back
-to the XGBoost + LightGBM ensemble, but results will differ from the published
-model.
+`.gitignore` excludes `models/*.joblib` and `models/*.pt`. Publish them with
+`scripts/upload_weights.sh` into the `v4/` folder of the Hub repo and let
+`rootscope/weights.py` fetch them.
 
-## For maintainers: publishing the weights
+## Why the bundles are 160 MB
 
-Run [`scripts/upload_weights.sh`](../scripts/upload_weights.sh), which uploads
-every file above to the Hub repo named in `DEFAULT_HF_REPO`
-([`rootscope/weights.py`](../rootscope/weights.py)) under these exact names.
-Prerequisites: create the model repo on huggingface.co, then `hf auth login`
-with a **Write** token.
-
-To publish somewhere else instead, set `ROOTSCOPE_HF_REPO` (a different Hub repo)
-or `ROOTSCOPE_MODELS_URL` (any base URL where `<base-url>/model_LightGBM.joblib`
-downloads directly).
-
-## For users: using your own weights
-
-Drop the files into this `models/` folder, or point at them explicitly:
-
-```bash
-rootscope --tif image.tif \
-    --model-dir /path/to/models \
-    --cnn-weights /path/to/backbone.pt
-```
-
-or
-
-```bash
-export ROOTSCOPE_MODEL_DIR=/path/to/models
-export ROOTSCOPE_CNN_WEIGHTS=/path/to/backbone.pt
-```
+Each holds all six per-round models, because inference replays the same
+round-specific model the training run used at that round. A bundle saved with
+only the final-round model (as the research grid's `runs10/` did) cannot be
+replayed and `classify_v4.load_models` refuses it.

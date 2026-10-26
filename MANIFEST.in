@@ -2,3 +2,4 @@ include README.md
 include LICENSE
 include environment.yml
 recursive-include pipeline *.py *.md
+recursive-include rootscope/data *.csv

@@ -1,31 +1,38 @@
-# Dependencies for the RootScope Hugging Face Space.
+# Dependencies for the RootScope v4 Hugging Face Space.
 #
-# Copy this file (plus app.py, README.md, and the two example TIFFs) into the
-# Space repo. See webapp/README.md for the deploy steps.
+# The Space vendors its own copy of rootscope/ (uploaded next to app.py), so
+# RootScope is NOT installed from GitHub here. Doing both would put two
+# packages of the same name on sys.path and whichever imports first wins --
+# a bug that shows up only as wrong predictions.
 #
-# torch is NOT pinned here, deliberately. ZeroGPU only supports torch 2.8.0
-# and newer (2.8.0 / 2.9.1 / 2.10.0 / 2.11.0), whereas RootScope's own
-# requirements.txt pins torch==2.4.0 for local reproducibility. Installing
-# RootScope from git uses pyproject.toml instead, whose floor is torch>=2.0,
-# so pip is free to resolve the version ZeroGPU provides.
+# torch is NOT pinned, deliberately: ZeroGPU supports only torch >= 2.8 and
+# picks the version. torch 2.6+ defaults torch.load(weights_only=True), which
+# backbone.pt and the Cellpose-SAM checkpoint must load under -- test the two
+# example images on the Space before announcing a change.
 #
-# CONSEQUENCE: the Space runs a torch/cellpose combination that has NOT been
-# validated against the published models. Test the example images on the Space
-# and compare against a local run before announcing it. In particular torch
-# 2.6+ flipped `torch.load(weights_only=...)` to True by default, which affects
-# how backbone.pt and the Cellpose-SAM checkpoint load.
+# v4 needs no xgboost: the classifier is LightGBM only. It is not listed on
+# purpose (unpickling an XGBoost Booster is what poisons ZeroGPU's CUDA state;
+# see classify_worker.py). Do not add it back for "completeness".
 
 gradio>=5.0
 spaces>=0.30
 
-# RootScope itself, straight from GitHub. Pin to a tag or commit before you
-# announce the Space, so a push to main cannot change what users get.
-rootscope @ git+https://github.com/ct-tranchau/Rootscope.git@main
-
-# scikit-learn is a hard pin inherited from the package: the released .joblib
-# models were pickled with 1.7.2 and other versions can fail to unpickle.
+# scikit-learn is a hard pin: the LightGBM bundles carry StandardScalers pickled
+# with 1.7.2, and other versions can fail to unpickle or change results.
 scikit-learn==1.7.2
 
-# Everything else (numpy, pandas, scipy, scikit-image, cellpose, xgboost,
-# lightgbm, tifffile, imagecodecs, huggingface_hub, ...) comes in as a
-# dependency of rootscope.
+numpy>=1.24
+pandas>=2.0
+scipy>=1.10
+scikit-image>=0.22
+opencv-python-headless>=4.8
+Pillow>=10.0
+tifffile>=2024.1.30
+imagecodecs>=2024.1.1
+joblib>=1.3
+tqdm>=4.66
+lightgbm>=4.0
+cellpose>=4.0
+torch
+torchvision
+huggingface_hub>=0.24

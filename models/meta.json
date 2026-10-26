@@ -1,0 +1,42 @@
+{
+  "arch": "vitb14",
+  "hub_name": "dinov2_vitb14_reg",
+  "emb_dim": 768,
+  "classes": [
+    "root_cap",
+    "epidermis",
+    "exodermis",
+    "cortex",
+    "endodermis",
+    "pericycle",
+    "xylem",
+    "phloem",
+    "stele"
+  ],
+  "best_epoch": 25,
+  "best_val_acc": 0.8511991076408254,
+  "unfreeze_blocks": 12,
+  "min_confidence": 0.6,
+  "val_images": [
+    "EarlyMaturation2_Ecrusgalli_RootTip_AO_09.aivia.tif",
+    "Fanomila_RootTip_AO_03.aivia.tif",
+    "Maturation2_Agraveolens_RootTip_AO_Position25.aivia.tif",
+    "Maturation2_Dcaryophyllus_5Agarose_RootTip_AO_09.aivia.tif",
+    "Maturation2_Ecrusgalli_RootTip_AO_14.aivia.tif",
+    "Maturation2_Nattenuata_RootTip_AO_02_Crop.aivia.tif",
+    "Maturation2_Sbicolor_RootTip_AO_03.aivia.tif",
+    "Maturation3_Cmaxima_RootTip_AO_12.aivia.tif",
+    "Maturation3_Tglabra_5Agarose_AO_04 - Projected.aivia.tif",
+    "Mature1_Outlined_Inil_RootTip_AO_9.aivia.tif",
+    "Mature1_Trepens_RootTip_AO_2.aivia.tif",
+    "Mature1_Turgidum_RootTip_AO_8.aivia.tif",
+    "Mature2_Trepens_RootTip_AO_8.aivia.tif",
+    "Mature3_Inil_RootTip_AO_2.aivia.tif",
+    "Mature3_Trepens_RootTip_AO_9.aivia.tif",
+    "Meristem1_Psativum_RootTip_AO_16.aivia.tif",
+    "Meristem2_Toccidentale_RootTip_AO_6.aivia.tif",
+    "Meristem3_Turgidum_RootTip_AO_9.aivia.tif",
+    "Sarcanum_Meristem1.aivia.tif",
+    "Sarcanum_Meristem3.aivia.tif"
+  ]
+}

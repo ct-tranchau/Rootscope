@@ -1,0 +1,32 @@
+binomial,family,group,in_training,exodermis_in_training,exodermis_literature,note,source
+Oryza sativa,Poaceae,monocot,yes,yes,,,training annotations
+Triticum turgidum,Poaceae,monocot,yes,yes,,,training annotations
+Chrysopogon serrulatus,Poaceae,monocot,yes,yes,,,training annotations
+Sorghum bicolor,Poaceae,monocot,yes,yes,,,training annotations
+Echinochloa crus-galli,Poaceae,monocot,yes,no,,no exodermis was annotated in any of the 6 training sections,training annotations
+Erysimum cheiranthoides,Brassicaceae,eudicot,yes,yes,,,training annotations
+Cucurbita maxima,Cucurbitaceae,eudicot,yes,yes,,,training annotations
+Vigna mungo,Fabaceae,eudicot,yes,no,,no exodermis was annotated in any of the 4 training sections,training annotations
+Cicer arietinum,Fabaceae,eudicot,yes,yes,,present in maturation sections; absent in meristem sections (the layer has not formed yet),training annotations
+Pisum sativum,Fabaceae,eudicot,yes,no,conflicting,no exodermis was annotated in any of the 4 training sections; the literature reports both presence and absence,training annotations; Hose et al. 2001 J Exp Bot 52:2245
+Trifolium repens,Fabaceae,eudicot,yes,yes,,,training annotations
+Trifolium occidentale,Fabaceae,eudicot,yes,yes,,,training annotations
+Dianthus caryophyllus,Caryophyllaceae,eudicot,yes,yes,,,training annotations
+Ipomoea nil,Convolvulaceae,eudicot,yes,yes,,,training annotations
+Petunia axillaris,Solanaceae,eudicot,yes,yes,,,training annotations
+Nicotiana attenuata,Solanaceae,eudicot,yes,yes,,,training annotations
+Capsicum annuum,Solanaceae,eudicot,yes,yes,,,training annotations
+Solanum melongena,Solanaceae,eudicot,yes,yes,,,training annotations
+Solanum arcanum,Solanaceae,eudicot,yes,yes,,,training annotations
+Solanum pennellii,Solanaceae,eudicot,yes,yes,,,training annotations
+Fraxinus anomala,Oleaceae,eudicot,yes,yes,,,training annotations
+Handroanthus impetiginosus,Bignoniaceae,eudicot,yes,yes,,present in early maturation sections; absent in meristem sections (the layer has not formed yet),training annotations
+Tabebuia glabra,Bignoniaceae,eudicot,yes,yes,,,training annotations
+Apium graveolens,Apiaceae,eudicot,yes,yes,,,training annotations
+Erigeron canadensis,Asteraceae,eudicot,yes,yes,,,training annotations
+Vicia faba,Fabaceae,eudicot,no,,no,does not develop an exodermis even in soil culture,Hose et al. 2001 J Exp Bot 52:2245
+Hordeum vulgare,Poaceae,monocot,no,,no,seminal roots have no exodermis; the apoplastic barrier is the endodermis,Hose et al. 2001 J Exp Bot 52:2245
+Triticum aestivum,Poaceae,monocot,no,,no,reported as non-exodermal,Hose et al. 2001 J Exp Bot 52:2245
+Zea mays,Poaceae,monocot,no,,yes,exodermis develops in soil culture,Hose et al. 2001 J Exp Bot 52:2245
+Allium cepa,Amaryllidaceae,monocot,no,,yes,classic exodermis model species,Hose et al. 2001 J Exp Bot 52:2245
+Helianthus annuus,Asteraceae,eudicot,no,,yes,,Hose et al. 2001 J Exp Bot 52:2245

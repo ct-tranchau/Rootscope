@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rootscope"
-version = "0.1.0"
-description = "Cell-type prediction for confocal root-tip cross-section images (segment + predict from a TIFF)."
+version = "4.1.0"
+description = "RootScope v4: cell-type prediction for confocal root cross-section images (segment + predict from a TIFF)."
 readme = "README.md"
 requires-python = ">=3.10"   # scikit-learn 1.7.2 is pinned and ships no 3.9 wheel
 license = { file = "LICENSE" }
@@ -60,4 +60,4 @@ rootscope = "rootscope.cli:main"
 packages = ["rootscope"]
 
 [tool.setuptools.package-data]
-rootscope = ["py.typed"]
+rootscope = ["py.typed", "data/*.csv"]

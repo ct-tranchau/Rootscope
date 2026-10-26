@@ -21,3 +21,8 @@ predictions/
 # OS / editor
 .DS_Store
 .ipynb_checkpoints/
+
+# Working files from the v4 packaging pass -- never publish
+*.bak_*
+tests/*.log
+tests/cut_jobid*

@@ -24,7 +24,7 @@
 set -euo pipefail
 
 REPO="ct-tranchau/Rootscope"
-SRC="/projects/songli_lab/Nina/Image_analysis/Test_050326"
+SRC="${ROOTSCOPE_SRC:-$(pwd)}"   # dat ROOTSCOPE_SRC toi thu muc chua weights
 MODELS="$SRC/trained_model_iterative_cnn_finetuned"
 DINO="$SRC/dinov2_finetuned"
 

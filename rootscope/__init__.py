@@ -16,7 +16,7 @@ Typical use (Python):
     df = predict_tif("my_image.tif", out_dir="results/", gpu=True)
 """
 
-__version__ = "0.1.0"
+__version__ = "4.1.0"
 
 from .api import predict_tif, predict_folder  # noqa: E402,F401
 
