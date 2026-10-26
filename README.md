@@ -1,4 +1,7 @@
-# RootScope V4: Cross-species Root Cell-Type Classification from Confocal Microscopy Images
+# RootScope: Cross-species Root Cell-Type Classification from Confocal Microscopy Images
+
+<img width="468" height="28" alt="image" src="https://github.com/user-attachments/assets/ad8bf92f-e877-4534-8d9a-aac8bd606b66" />
+
 
 Give RootScope a confocal cross-section TIFF of a root; it segments every cell
 (Cellpose-SAM) and labels each one as one of nine cell types. This is the
