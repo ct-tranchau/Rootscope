@@ -28,7 +28,7 @@ confidence tier, the exodermis decision, and per-class counts. The CSV carries
 the label, its confidence, the nine class probabilities, and the round-1 label
 so the effect of refinement is visible per cell.
 
-Exodermis. Some species never form this layer. The classifier tends to draw a partial layer anyway. The package decides from the image and, if you give a species name, from the species table shipped with the package. When the layer is judged absent, the class is removed and each cell takes its next most likely type. 
+Exodermis. Some species never form this layer. The package decides from the image and, if you give a species name, from the species table shipped with the package. When the layer is judged absent, the class is removed and each cell takes its next most likely type. --species, --no-exodermis, --has-exodermis (optional) 
 
 ```bash
 rootscope --tif my_image.tif --out results/ --species "Pisum sativum"
@@ -51,27 +51,6 @@ On one GPU an image is 1-3 minutes; on a multi-core CPU a few minutes. The web
 app loads both networks once per process, so a second image is faster than the
 first.
 
-## Layout
-
-```
-rootscope/
-  api.py, cli.py         entry points
-  predict.py             segment -> features -> embed -> classify stages
-  classify_v4.py         the refinement loop, seed averaging, radial prior
-  context.py             soft-neighbor + layer-distance features
-  extract_features.py    Cellpose-SAM + 96 morpho-topological features
-  cnn_embeddings.py      fine-tuned DINOv2 ViT-B/14 embeddings
-  radial_order.py        radial-order prior
-  layer_rules.py         exodermis decision and along-the-layer smoothing
-  species.py             species table (data/species_exodermis.csv)
-  report.py              the per-image trust report
-  weights.py             finds / downloads the weights
-webapp/                  Gradio app for the Hugging Face Space
-pipeline/                feature-extraction and training scripts (the released
-                         model was trained in the research repo; its evaluation
-                         grid is described in the manuscript)
-```
-
 ## Contact
 
-tnchau@vt.edu.
+Tran Chau at tnchau@vt.edu.
